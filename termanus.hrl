@@ -50,7 +50,7 @@
 -record(block, {anno, val}). 						%% {block,ANNO,Rep(B)}.
 -record('case', {anno, val}). 						%% {'case',ANNO,Rep(E_0),[Rep(Cc_1)]}.
 -record('catch', {anno, val}). 						%% {'catch',ANNO,Rep(E_0)}.
--define(func, {function, _, _}).
+-define(func, {function, Name, Arity}).
 -define(func_full, {function, _, _, _}).
 -define(func_local, {'fun', _, ?func}). 			%% {'fun',ANNO,{function,Name,Arity}}.
 -define(func_far, {'fun', _, ?func_full). 			%% {'fun',ANNO,{function,Rep(Module),Rep(Name),Rep(Arity)}}.
