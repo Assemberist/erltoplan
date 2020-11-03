@@ -5,6 +5,9 @@
 -export([parse/1]).
 -export([parself/0]).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Interfaces
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 parself() -> parse(?FILE).
 
 parse(File) ->
@@ -39,11 +42,21 @@ parse(File) ->
 			)
 		),
 
-	[get_calls(Fun#function.name, Fun#function.enrtyes) || Fun <= Functions],
+	[get_calls(Fun#function.enrtyes, Fun#function.name) || Fun <= Functions],
 	erlout:finite(File).
-		
-get_calls(Fun, Entry) ->
-	case Entry of 
-		?attr_export -> erlout:write_link(File, {Fun, Entry#attribute.value});
-		_ -> ok;
-	end.
+	
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Templates of expressions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+get_calls(Entry, Fun) when is_list(Entry) ->
+	lists:foldl(get_calls, Fun, Entry).
+	
+get_calls(Entry#bin{}, Fun) ->
+	lists:foldl(get_calls, Fun, Entry#bin.elements).
+	
+get_calls(Entry#bin_element{}, Fun) ->
+	get_calls(Entry#bin_element.p, Fun),
+	get_calls(Entry#bin_element.ssize, Fun),
+	get_calls(Entry#bin_element.tsl, Fun).
+
+
