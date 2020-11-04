@@ -1,6 +1,6 @@
 -module(etoplan).
 
--include("termanus.hrl").
+-include("/home/sanya/Рабочий стол/sources/erltoplan/termanus.hrl").
 
 -export([parse/1]).
 -export([parself/0]).
@@ -11,6 +11,7 @@
 parself() -> parse(?FILE).
 
 parse(File) ->
+	erlout:start_wrapper(),
 	erlout:init_file(File),
 	{ok, Src} = epp:parse_file(File, []),
 	
@@ -29,7 +30,7 @@ parse(File) ->
 		
 	erlout:write_export(File, Extports),
 	
-	Functionss = 
+	Functions = 
 		proplists:get_keys(
 			lists:foldl(
 				fun(A, Acc)->
@@ -42,25 +43,22 @@ parse(File) ->
 			)
 		),
 
-	[get_calls(Fun#function.enrtyes, Fun#function.name) || Fun <= Functions],
+	[get_calls(Fun#function.enrtyes, Fun#function.name) || Fun <- Functions],
 	erlout:finite(File).
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Templates of expressions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 get_calls(Entry, Fun) when is_list(Entry) ->
-	lists:foldl(get_calls, Fun, Entry).
+	lists:foldl(get_calls, Fun, Entry);
 
 get_calls(?func, Fun) ->
-	erlout:write_link(Fun, )
+	erlout:write_link(Fun, yey);
 	
-get_calls(Entry#bin{}, Fun) ->
-	lists:foldl(get_calls, Fun, Entry#bin.elements).
+get_calls(Entry = #bin{}, Fun) ->
+	lists:foldl(get_calls, Fun, Entry#bin.elements);
 	
-get_calls(Entry#bin_element{}, Fun) ->
+get_calls(Entry = #bin_element{}, Fun) ->
 	get_calls(Entry#bin_element.p, Fun),
 	get_calls(Entry#bin_element.ssize, Fun),
 	get_calls(Entry#bin_element.tsl, Fun).
-
-get_calls(Entry#bin_element{}, Fun) ->
-	
