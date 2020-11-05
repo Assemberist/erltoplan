@@ -36,7 +36,7 @@
 
 %% patterns
 -record(bin_element, {anno, p, ssize, tsl}). 		%% {bin_element,ANNO,Rep(P_1),Rep(Size_1),Rep(TSL_1)}
--record(bin, {anno, elements :: [bin_element]}). 	%% {bin,ANNO,[{bin_element,ANNO,Rep(P_k),Rep(Size_k),Rep(TSL_k)}]}. 
+-record(bin, {anno, elements :: [#bin_element{}]}). 	%% {bin,ANNO,[{bin_element,ANNO,Rep(P_k),Rep(Size_k),Rep(TSL_k)}]}. 
 -record(match, {anno, p1, p2}).						%% {match,ANNO,Rep(P_1),Rep(P_2)}
 -record(cons, {anno, ph, pt}).						%% {cons,ANNO,Rep(P_h),Rep(P_t)}.
 -record(map, {anno, entryes}).						%% {map,ANNO,[Rep(A_1)]}.
