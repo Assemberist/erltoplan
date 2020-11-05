@@ -1,6 +1,6 @@
 -module(etoplan).
 
--include("/home/sanya/Рабочий стол/sources/erltoplan/termanus.hrl").
+-include("termanus.hrl").
 
 -export([parse/1]).
 -export([parself/0]).
@@ -49,7 +49,7 @@ parse(File) ->
 %% Templates of expressions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 get_calls(Entry, Fun) when is_list(Entry) ->
-	lists:foldl(get_calls, Fun, Entry).
+	lists:foldl(get_calls, Fun, Entry);
 	
 get_calls(Entry = #bin{}, Fun) ->
 	lists:foldl(get_calls, Fun, Entry#bin.elements);
