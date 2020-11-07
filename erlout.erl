@@ -1,21 +1,105 @@
 -module(erlout).
+-behavior(gen_server).
 
--export([init/1, write_export/2, write_link/2, finite/1]).
+-define(server, {global, ?MODULE}).
 
-init(File) -> file:write_file(File, "@startuml\n", [write]).
+-export([init/1, handle_call/3, handle_cast/2]).
+-export([start/0, set_file/1, write_export/1, write_link/2, write_far_link/3, finite/0]).
+-export([fart_olink/2]).
 
-write_export(File, Exports) ->
-	file:write_file(File, "node \"exports\" {\n", [append]),
+-record(state, {
+	file :: string(), 
+	external = #{} :: #{atom() => [atom()]},
+	links = [] :: [{atom(), atom()}]
+}).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% interface funs														%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+start() ->
+	gen_server:start_link(?server, ?MODULE, [], []).
+
+set_file(File) ->
+	gen_server:cast(?server, {set_file, File}).
+
+write_export(Exports) ->
+	gen_server:cast(?server, {add_fart, exports, Exports}).
+
+write_link(Caller, Called) ->
+	gen_server:cast(?server, {add_link, Caller, Called}).
+
+write_far_link(Caller, Module, Called) ->
+	Converted = fart_olink(Module, Called),
+	gen_server:cast(?server, {add_fart, Module, Converted}),
+	write_link(Caller, Converted).
+
+finite() ->
+	gen_server:cast(?server, finite).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% gen_server part														%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+init(_) -> {ok, #state{}}.
+
+handle_cast({set_file, File}, State) ->
+	{noreply, State#state{file = File}};
+
+handle_cast({add_link, Caller, Called}, State = #state{links = Links}) ->
+	NewLinks = case lists:member({Caller, Called}, Links) of
+		true -> Links;
+		false -> [{Caller, Called} | Links]
+	end,
+	{noreply, State#state{links = NewLinks}};
+
+handle_cast({add_fart, Module, Fart}, State = #state{external = FarList}) ->
+	NewList = case maps:is_key(Module, FarList) of
+		true -> 
+			#{Module := Value} = FarList,
+			case lists:member(Fart, Value) of
+				true -> FarList;
+				false -> FarList#{Module => [Fart | Value]}
+			end;
+		false ->
+			FarList#{Module => [Fart]}
+	end,
+	{noreply, State#state{external = NewList}};
+
+
+handle_cast(finite, #state{file = File, external = Ext, links = Links}) ->
+	%% init UML
+	file:write_file(File, "@startuml\n\n", [write]),
+
+	%% write all nodes
+	maps:map(fun(Module, Value) -> put_node(File, Module, Value) end, Ext),
+
+	%% write all links
+	lists:map(fun(Value) -> put_link(File, Value) end, Links),
+
+	%% end of UML
+	file:write_file(File, "@enduml", [append]),
+	{noreply, #state{}}.
+
+handle_call(_, _, State) ->
+	{reply, {error, you_pidor}, State}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  iternal functions													%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+fart_olink(A, B) ->
+	list_to_atom(atom_to_list(A) ++ ":" ++ atom_to_list(B)).
+
+put_node(File, NodeName, Elementes) ->
+	file:write_file(File, "node \"" ++ atom_to_list(NodeName) ++ "\" {\n", [append]),
 	lists:map(
 		fun(Element) -> 
 			lists:map(fun(Value) -> file:write_file(File, Value, [append]) end,
-				["\t[", atom_to_binary(Element), "]\n"])
+				["\t[", atom_to_list(Element), "]\n"])
 		end, 
-		Exports),
-	file:write_file(File, "}\n", [append]).
+		Elementes),
+	file:write_file(File, "}\n\n", [append]).
 
-write_link(File, {Caller, Called}) ->
+put_link(File, {Caller, Called}) ->
 	lists:map(fun(Value) -> file:write_file(File, Value, [append]) end,
-		["[", Caller, "] --> [", Called, "]\n"]).
-
-finite(File) -> file:write_file(File, "@enduml", [append]).
+		["[", atom_to_list(Caller), "] --> [", atom_to_list(Called), "]\n"]).
