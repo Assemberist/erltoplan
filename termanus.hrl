@@ -15,35 +15,34 @@
 %% record fields
 -record(record_index, {anno, name, value}). 									%% {record_index,ANNO,Name,Rep(Field)}.
 -record(record, {anno, name, value}). 											%% {record,ANNO,Name,[{record_field,ANNO,Rep(Field_1),Rep(P_1)}]}.
--define(record2, {record, _, _, _, _}).											%% {record,ANNO,Rep(E_0),Name,[{record_field,ANNO,Rep(Field_1),Rep(E_1)}]}.
+-define(record2, {record, ANNO, Val, RecName, Fields}).							%% {record,ANNO,Rep(E_0),Name,[{record_field,ANNO,Rep(Field_1),Rep(E_1)}]}.
 -record(tuple, {anno, fields}). 												%% {tuple,ANNO,[Rep(P_1)]}.
 -record(record_field, {anno, field}). 											%% {record_field,ANNO,Rep(A)}.
--define(record_field_exp, {record_field, _, _, _}). 							%% {record_field,ANNO,Rep(A),Rep(E)}.
--define(record_field_wtf, {record_field, _, _, _, _}).							%% {record_field,ANNO,Rep(Gt_0),Name,Rep(Field)}.
+-define(record_field_exp, {record_field, ANNO, Field, Exp}).					%% {record_field,ANNO,Rep(A),Rep(E)}.
+-define(record_field_wtf, {record_field, ANNO, Field, Name, Exp}).				%% {record_field,ANNO,Rep(Gt_0),Name,Rep(Field)}.
 -record(typed_record_field, {field :: #record_field{}, exp}). 					%% {typed_record_field,{record_field,ANNO,Rep(A)},Rep(T)}.
--define(typed_record_field_exp, {typed_record_field, ?record_field_exp, _}).	%% 
-%% {record,ANNO,Name,[{record_field,ANNO,Rep(Field_1),Rep(Gt_1)}]}.
+-define(typed_record_field_exp, {typed_record_field, ?record_field_exp, TExp}).	%% {record,ANNO,Name,[{record_field,ANNO,Rep(Field_1),Rep(Gt_1)}]}.
 
 
 %% atomic literals
 -define(atomic(A), -record(A, {anno, val})).
-?atomic(atom). %% {atom,ANNO,L}.
-?atomic(char). %% {char,ANNO,L}.
-?atomic(float). %% {float,ANNO,L}.
-?atomic(integer). %% {integer,ANNO,L}.
-?atomic(string). %% {string,ANNO,[C_1, ..., C_k]}.
-?atomic(var). %% {var, ANNO, V}.
+?atomic(atom). 		%% {atom,ANNO,L}.
+?atomic(char). 		%% {char,ANNO,L}.
+?atomic(float). 	%% {float,ANNO,L}.
+?atomic(integer). 	%% {integer,ANNO,L}.
+?atomic(string). 	%% {string,ANNO,[C_1]}.
+?atomic(var). 		%% {var, ANNO, V}.
 
 %% patterns
 -record(bin_element, {anno, p, ssize, tsl}). 		%% {bin_element,ANNO,Rep(P_1),Rep(Size_1),Rep(TSL_1)}
--record(bin, {anno, elements :: [#bin_element{}]}). 	%% {bin,ANNO,[{bin_element,ANNO,Rep(P_k),Rep(Size_k),Rep(TSL_k)}]}. 
+-record(bin, {anno, elements :: [#bin_element{}]}). %% {bin,ANNO,[{bin_element,ANNO,Rep(P_k),Rep(Size_k),Rep(TSL_k)}]}. 
 -record(match, {anno, p1, p2}).						%% {match,ANNO,Rep(P_1),Rep(P_2)}
 -record(cons, {anno, ph, pt}).						%% {cons,ANNO,Rep(P_h),Rep(P_t)}.
 -record(map, {anno, entryes}).						%% {map,ANNO,[Rep(A_1)]}.
--define(map_update, {map, _, _, _}). 				%% {map,ANNO,Rep(E_0),[Rep(A_1)]}.
+-define(map_update, {map, ANNO, Origin, Update}). 	%% {map,ANNO,Rep(E_0),[Rep(A_1)]}.
 -record(nil, {anno}).								%% {nil,ANNO}.
--define(op2, {op, _, _, _, _}). 					%% {op,ANNO,Op,Rep(P_1),Rep(P_2)}.
--record(op, {anno, oper, value}).							%% {op,ANNO,Op,Rep(Gt_0)}.
+-record(op, {anno, oper, value}).					%% {op,ANNO,Op,Rep(Gt_0)}.
+-define(op2, {op, ANNO, Op, Val1, Val2}). 			%% {op,ANNO,Op,Rep(P_1),Rep(P_2)}.
 
 %% Expressions
 -record(bc, {anno, e0, q}). 						%% {bc,ANNO,Rep(E_0),[Rep(Q_1)]}.
