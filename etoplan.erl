@@ -147,6 +147,99 @@ get_calls(?op2, Fun) ->
 	get_calls(Val2, Fun),
 	ok;
 
+%% Expressions
+
+get_calls(Entry = #bc{}, Fun) ->
+	get_calls(Entry#bc.e0),
+	get_calls(Entry#bc.q),
+	ok;
+
+get_calls(Entry = #block{}, Fun) ->
+	get_calls(Entry#block.val),
+	ok;
+
+get_calls(Entry = #'case'{}, Fun) ->
+	get_calls(Entry#'case'.val),
+	ok;
+
+get_calls(Entry = #'catch'{}, Fun) ->
+	get_calls(Entry#'catch'.val),
+	ok;
+
+get_calls(Entry = #'if'{}, Fun) ->
+	get_calls(Entry#'if'.val),
+	ok;
+
+get_calls(Entry = #'lc'{}, Fun) ->
+	get_calls(Entry#'lc'.val),
+	ok;
+
+get_calls(Entry = #'receive'{}, Fun) ->
+	get_calls(Entry#'receive'.val),
+	ok;
+
+get_calls(?receive_after, Fun) ->
+	get_calls(Cond, Fun),
+	get_calls(While, Fun),
+	get_calls(After, Fun),
+	ok;
+
+get_calls(Entry = #'try'{}, Fun) ->
+	get_calls(Entry#'try'.body, Fun),
+	get_calls(Entry#'try'.exp, Fun),
+	get_calls(Entry#'try'.val1, Fun),
+	get_calls(Entry#'try'.val2, Fun),
+	ok;
+
+%% functions
+
+%% Qualifiers
+
+get_calls(Entry = #generate{}, Fun) ->
+	get_calls(Entry#generate.from),
+	get_calls(Entry#generate.to),
+	ok;
+
+get_calls(Entry = #b_generate{}, Fun) ->
+	get_calls(Entry#b_generate.from),
+	get_calls(Entry#b_generate.to),
+	ok;
+
+%% Associations
+
+get_calls(Entry = #map_field_assoc{}, Fun) ->
+	get_calls(Entry#map_field_assoc.what),
+	get_calls(Entry#map_field_assoc.update),
+	ok;
+
+%% 8.5  Clauses
+
+get_calls(Entry = #clause{}, Fun) ->
+	get_calls(Entry#clause.head),
+	get_calls(Entry#clause.body),
+	get_calls(Entry#clause.tail),
+	ok;
+
+get_calls(Entry = #throw{}, Fun) ->
+	get_calls(Entry#throw.any),
+	ok;
+
+%% 8.7  Types
+
+get_calls(Entry = #ann_type{}, Fun) ->
+	get_calls(Entry#ann_type.value),
+	ok;
+
+get_calls(Entry = #remote_type{}, Fun) ->
+	get_calls(Entry#remote_type.value),
+	ok;
+
+get_calls(Entry = #type{}, Fun) ->
+	get_calls(Entry#type.value),
+	ok;
+
+%% else
+
 get_calls(_, _) -> 
 	ok.
 

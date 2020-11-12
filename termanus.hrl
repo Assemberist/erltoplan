@@ -49,25 +49,25 @@
 -record(block, {anno, val}). 						%% {block,ANNO,Rep(B)}.
 -record('case', {anno, val}). 						%% {'case',ANNO,Rep(E_0),[Rep(Cc_1)]}.
 -record('catch', {anno, val}). 						%% {'catch',ANNO,Rep(E_0)}.
--define(func, {function, _, _}).
--define(func_full, {function, _, _, _}).
--define(func_local, {'fun', _, ?func}). 			%% {'fun',ANNO,{function,Name,Arity}}.
--define(func_far, {'fun', _, ?func_full). 			%% {'fun',ANNO,{function,Rep(Module),Rep(Name),Rep(Arity)}}.
--define(func_claus, {'fun', _, {clauses, _}}). 		%% {'fun',ANNO,{clauses,[Rep(Fc_1)]}}.
--record(named_fun, {anno, name, value}). 			%% {named_fun,ANNO,Name,[Rep(Fc_1)]}.
--record(call, {anno, who, value}). 					%% {call,ANNO,Rep(E_0),[Rep(E_1)]}.
--record(remote, {anno, mod, func}). 				%% {call,ANNO,{remote,ANNO,Rep(E_m),Rep(E_0)},[Rep(E_1)]}.
 -record('if', {anno, val}). 						%% {'if',ANNO,[Rep(Ic_1)]}.
 -record('lc', {anno, val}). 						%% {'lc',ANNO,[Rep(Ic_1)]}.
 -record('receive', {anno, val}). 					%% {'receive',ANNO,[Rep(Cc_1)]}.
--define(receive_after, {'receive', _, _, _, _}).
+-define(receive_after, {'receive', ANNO, Cond, While, After}).	%% {'receive',ANNO,[Rep(Cc_1)],Rep(E_0),Rep(B_t)}.
 -record('try', {anno, body, exp, val1, val2}). 	%% {'try',ANNO,Rep(B),[Rep(Cc_1)],[Rep(Tc_1)],Rep(A)}.
+
+%% functions
+-define(func, {function, _, _}).
+-define(func_full, {function, _, _, _}).
+-define(func_local, {'fun', _, ?func}). 		%% {'fun',ANNO,{function,Name,Arity}}.
+-define(func_far, {'fun', _, ?func_full). 		%% {'fun',ANNO,{function,Rep(Module),Rep(Name),Rep(Arity)}}.
+-define(func_claus, {'fun', _, {clauses, _}}). 	%% {'fun',ANNO,{clauses,[Rep(Fc_1)]}}.
+-record(named_fun, {anno, name, value}). 		%% {named_fun,ANNO,Name,[Rep(Fc_1)]}.
+-record(call, {anno, who, value}). 				%% {call,ANNO,Rep(E_0),[Rep(E_1)]}.
+-record(remote, {anno, mod, func}). 			%% {call,ANNO,{remote,ANNO,Rep(E_m),Rep(E_0)},[Rep(E_1)]}.
 
 %% Qualifiers
 -record(generate, {anno, from, to}). 	%% {generate,ANNO,Rep(P),Rep(E)}.
 -record(b_generate, {anno, from, to}). 	%% {generate,ANNO,Rep(P),Rep(E)}.
-
-%% Rep(TSL) = [Rep(TS_1)].
 
 %% Associations
 -record(map_field_assoc, {anno, what, update}).
