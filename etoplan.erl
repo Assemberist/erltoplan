@@ -29,7 +29,7 @@ parse(File) ->
 			)
 		),
 		
-	erlout:write_export(?output, Extports),
+	erlout:write_exports(Extports),
 	
 	Functions = 
 		lists:foldl(
@@ -42,7 +42,7 @@ parse(File) ->
 			[], Src
 		),
 	[get_calls(Fun#function.enrtyes, Fun#function.name) || Fun <- Functions],
-	erlout:finite(?output).
+	erlout:finite().
 	
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Templates of expressions

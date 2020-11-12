@@ -23,8 +23,8 @@ start() ->
 set_file(File) ->
 	gen_server:cast(?server, {set_file, File}).
 
-write_export(Exports) ->
-	gen_server:cast(?server, {add_fart, exports, Exports}).
+write_exports(Exports) ->
+	[gen_server:cast(?server, {add_fart, exports, Export}) || Export <- Exports].
 
 write_link(Caller, Called) ->
 	gen_server:cast(?server, {add_link, Caller, Called}).
