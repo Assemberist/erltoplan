@@ -4,7 +4,7 @@
 -define(server, {global, ?MODULE}).
 
 -export([init/1, handle_call/3, handle_cast/2]).
--export([start/0, set_file/1, write_export/1, write_link/2, write_far_link/3, finite/0]).
+-export([start/0, set_file/1, write_exports/1, write_link/2, write_far_link/3, finite/0]).
 -export([fart_olink/2]).
 
 -record(state, {

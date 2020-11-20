@@ -1,6 +1,6 @@
 -module(etoplan).
 
--include("/home/sanya/Рабочий стол/sources/erltoplan/termanus.hrl").
+-include("termanus.hrl").
 
 -export([parse/1]).
 -export([parself/0]).
@@ -13,7 +13,8 @@
 parself() -> parse(?FILE).
 
 parse(File) ->
-	erlout:init(?output),
+	erlout:start(),
+	erlout:set_file(?output),
 	{ok, Src} = epp:parse_file(File, []),
 	
 	Extports = 
@@ -53,7 +54,7 @@ get_calls(Entry, Fun) when is_list(Entry) ->
 
 %% atomic literals
 	
-get_calls(#atom{}, Fun) -> ok;
+get_calls(Entry = #atom{}, Fun) -> erlout:write_link(Fun, Entry#atom.val);
 get_calls(#char{}, Fun) -> ok;
 get_calls(#float{}, Fun) -> ok;
 get_calls(#integer{}, Fun) -> ok;
@@ -63,11 +64,11 @@ get_calls(#var{}, Fun) -> ok;
 %% records
 	
 get_calls(Entry = #record_index{}, Fun) ->
-	get_calls(Entry#record_index.value),
+	get_calls(Entry#record_index.value, Fun),
 	ok;
 	
 get_calls(Entry = #record{}, Fun) ->
-	get_calls(Entry#record.value),
+	get_calls(Entry#record.value, Fun),
 	ok;
 
 get_calls(?record2, Fun) ->
@@ -93,21 +94,21 @@ get_calls(?record_field_wtf, Fun) ->
 	get_calls(Exp, Fun),
 	ok;
 
-get_calls(Entry = #typed_record_field{}, Fun) ->
-	get_calls(Entry#typed_record_field.field, Fun),
-	get_calls(Entry#typed_record_field.exp, Fun),
-	ok;
-
 get_calls(?typed_record_field_exp, Fun) ->
 	get_calls(Field, Fun),
 	get_calls(Exp, Fun),
 	get_calls(TExp, Fun),	
 	ok;
 
+get_calls(Entry = #typed_record_field{}, Fun) ->
+	get_calls(Entry#typed_record_field.field, Fun),
+	get_calls(Entry#typed_record_field.exp, Fun),
+	ok;
+
 %% patterns
 
 get_calls(Entry = #bin{}, Fun) ->
-	get_calls(Val, Fun),
+	get_calls(Entry#bin.elements, Fun),
 	ok;
 	
 get_calls(Entry = #bin_element{}, Fun) ->
@@ -150,32 +151,32 @@ get_calls(?op2, Fun) ->
 %% Expressions
 
 get_calls(Entry = #bc{}, Fun) ->
-	get_calls(Entry#bc.e0),
-	get_calls(Entry#bc.q),
+	get_calls(Entry#bc.e0, Fun),
+	get_calls(Entry#bc.q, Fun),
 	ok;
 
 get_calls(Entry = #block{}, Fun) ->
-	get_calls(Entry#block.val),
+	get_calls(Entry#block.val, Fun),
 	ok;
 
 get_calls(Entry = #'case'{}, Fun) ->
-	get_calls(Entry#'case'.val),
+	get_calls(Entry#'case'.val, Fun),
 	ok;
 
 get_calls(Entry = #'catch'{}, Fun) ->
-	get_calls(Entry#'catch'.val),
+	get_calls(Entry#'catch'.val, Fun),
 	ok;
 
 get_calls(Entry = #'if'{}, Fun) ->
-	get_calls(Entry#'if'.val),
+	get_calls(Entry#'if'.val, Fun),
 	ok;
 
 get_calls(Entry = #'lc'{}, Fun) ->
-	get_calls(Entry#'lc'.val),
+	get_calls(Entry#'lc'.val, Fun),
 	ok;
 
 get_calls(Entry = #'receive'{}, Fun) ->
-	get_calls(Entry#'receive'.val),
+	get_calls(Entry#'receive'.val, Fun),
 	ok;
 
 get_calls(?receive_after, Fun) ->
@@ -196,46 +197,46 @@ get_calls(Entry = #'try'{}, Fun) ->
 %% Qualifiers
 
 get_calls(Entry = #generate{}, Fun) ->
-	get_calls(Entry#generate.from),
-	get_calls(Entry#generate.to),
+	get_calls(Entry#generate.from, Fun),
+	get_calls(Entry#generate.to, Fun),
 	ok;
 
 get_calls(Entry = #b_generate{}, Fun) ->
-	get_calls(Entry#b_generate.from),
-	get_calls(Entry#b_generate.to),
+	get_calls(Entry#b_generate.from, Fun),
+	get_calls(Entry#b_generate.to, Fun),
 	ok;
 
 %% Associations
 
 get_calls(Entry = #map_field_assoc{}, Fun) ->
-	get_calls(Entry#map_field_assoc.what),
-	get_calls(Entry#map_field_assoc.update),
+	get_calls(Entry#map_field_assoc.what, Fun),
+	get_calls(Entry#map_field_assoc.update, Fun),
 	ok;
 
 %% 8.5  Clauses
 
 get_calls(Entry = #clause{}, Fun) ->
-	get_calls(Entry#clause.head),
-	get_calls(Entry#clause.body),
-	get_calls(Entry#clause.tail),
+	get_calls(Entry#clause.head, Fun),
+	get_calls(Entry#clause.body, Fun),
+	get_calls(Entry#clause.tail, Fun),
 	ok;
 
 get_calls(Entry = #throw{}, Fun) ->
-	get_calls(Entry#throw.any),
+	get_calls(Entry#throw.any, Fun),
 	ok;
 
 %% 8.7  Types
 
 get_calls(Entry = #ann_type{}, Fun) ->
-	get_calls(Entry#ann_type.value),
+	get_calls(Entry#ann_type.value, Fun),
 	ok;
 
 get_calls(Entry = #remote_type{}, Fun) ->
-	get_calls(Entry#remote_type.value),
+	get_calls(Entry#remote_type.value, Fun),
 	ok;
 
 get_calls(Entry = #type{}, Fun) ->
-	get_calls(Entry#type.value),
+	get_calls(Entry#type.value, Fun),
 	ok;
 
 %% else
