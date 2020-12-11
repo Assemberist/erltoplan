@@ -56,8 +56,8 @@
 -record('try', {anno, body, exp, val1, val2}). 	%% {'try',ANNO,Rep(B),[Rep(Cc_1)],[Rep(Tc_1)],Rep(A)}.
 
 %% functions
--define(func, {function, _, _}).
--define(func_full, {function, _, _, _}).
+-define(func, {function, _ANNO, Val}).
+-define(func_full, {function, _ANNO, , _}).
 -define(func_local, {'fun', _, ?func}). 		%% {'fun',ANNO,{function,Name,Arity}}.
 -define(func_far, {'fun', _, ?func_full). 		%% {'fun',ANNO,{function,Rep(Module),Rep(Name),Rep(Arity)}}.
 -define(func_claus, {'fun', _, {clauses, _}}). 	%% {'fun',ANNO,{clauses,[Rep(Fc_1)]}}.

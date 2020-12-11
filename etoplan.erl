@@ -1,6 +1,6 @@
 -module(etoplan).
 
--include("termanus.hrl").
+-include("/home/sanya/sources/erlang/erltoplan/termanus.hrl").
 
 -export([parse/1]).
 -export([parself/0]).
@@ -42,9 +42,29 @@ parse(File) ->
 			end, 
 			[], Src
 		),
-	[get_calls(Fun#function.enrtyes, Fun#function.name) || Fun <- Functions],
-	erlout:finite().
-	
+	[slide(Fun#function.enrtyes, Fun#function.name) || Fun <- Functions],
+	erlout:finite(),
+	get_calls(#char{}, []).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% New idea to search on tree
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
+slide(Element, FunName) when is_list(Element) ->
+	[slide(A, FunName) || A <- Element];
+
+slide(Element, FunName) when is_tuple(Element) ->
+	case element(1, Element) of
+		call ->
+			io:format("\nfounded call: \n~p\n", [Element]);
+		remote ->
+			io:format("\nfounded rem: \n~p\n", [Element]);
+		_ ->
+			ok
+	end,
+	[slide(Chpok, FunName) || Chpok <- tuple_to_list(Element)];
+
+slide(_, _) -> fuck.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Templates of expressions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
