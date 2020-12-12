@@ -35,7 +35,7 @@ write_far_link(Caller, Module, Called) ->
 	write_link(Caller, Converted).
 
 finite() ->
-	gen_server:cast(?server, finite).
+	gen_server:call(?server, finite).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% gen_server part														%%%%
@@ -63,10 +63,10 @@ handle_cast({add_fart, Module, Fart}, State = #state{external = FarList}) ->
 		false ->
 			FarList#{Module => [Fart]}
 	end,
-	{noreply, State#state{external = NewList}};
+	{noreply, State#state{external = NewList}}.
 
 
-handle_cast(finite, #state{file = File, external = Ext, links = Links}) ->
+handle_call(finite, _, #state{file = File, external = Ext, links = Links}) ->
 	%% init UML
 	file:write_file(File, "@startuml\n\n", [write]),
 
@@ -78,7 +78,7 @@ handle_cast(finite, #state{file = File, external = Ext, links = Links}) ->
 
 	%% end of UML
 	file:write_file(File, "@enduml", [append]),
-	{noreply, #state{}}.
+	{reply, ok, #state{}};
 
 handle_call(_, _, State) ->
 	{reply, {error, you_pidor}, State}.

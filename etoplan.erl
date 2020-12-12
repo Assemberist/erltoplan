@@ -49,28 +49,29 @@ parse(File) ->
 %% New idea to search on tree
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 slide(Element, FunName) when is_list(Element) ->
-	[slide(A, FunName) || A <- Element];
+	[slide(A, FunName) || A <- Element],
+	ok;
 
 slide(Element, FunName) when is_tuple(Element) ->
 	NextName = case element(1, Element) of
 		call ->
-			case Element#call.name of
+			case Element#call.who of
 				#atom{} -> 
-					Element#call.name#atom.val,
-					io:format("\ncall from ~p: \n~p\n", [Element#call.name#atom.val, Element]),
+					erlout:write_link(FunName, Element#call.who#atom.val),
+					Element#call.who#atom.val;
 				_ -> FunName
 			end;
 		remote ->
 			case {Element#remote.mod, Element#remote.func} of
 				{#atom{}, #atom{}} -> 
-					Val = erlout:fart_olink(Element#remote.name#atom.val, Element#remote.func#atom.val),
-					io:format("\nremote from ~p: \n~p\n", [Val, Element]),
-					Val;
+					erlout:write_far_link(FunName, Element#remote.mod#atom.val, Element#remote.func#atom.val),
+					erlout:fart_olink(Element#remote.mod#atom.val, Element#remote.func#atom.val);
 				_ -> FunName
 			end;
 		_ ->
-			ok
+			FunName
 	end,
-	[slide(Chpok, NextName) || Chpok <- tuple_to_list(Element)];
+	[slide(Chpok, NextName) || Chpok <- tuple_to_list(Element)],
+	ok;
 
 slide(_, _) -> fuck.
