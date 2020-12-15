@@ -4,13 +4,17 @@
 -define(server, {global, ?MODULE}).
 
 -export([init/1, handle_call/3, handle_cast/2]).
--export([start/0, set_file/1, write_exports/1, write_link/2, write_far_link/3, finite/0]).
+-export([start/0, set_file/1, write_exports/1, write_link/2, write_far_link/3, finite/0, 
+		shade_modules/1, shade_functions/1
+	]).
 -export([fart_olink/2]).
 
 -record(state, {
 	file :: string(), 
 	external = #{} :: #{atom() => [atom()]},
-	links = [] :: [{atom(), atom()}]
+	links = [] :: [{atom(), atom()}],
+	shaded_modules = [] :: [atom()],
+	shaded_functions = [] :: [atom()]
 }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -34,6 +38,12 @@ write_far_link(Caller, Module, Called) ->
 	gen_server:cast(?server, {add_fart, Module, Converted}),
 	write_link(Caller, Converted).
 
+shade_modules(ModuleList) ->
+	gen_server:cast(?server, {shade_modules, ModuleList}).
+
+shade_functions(FunList) ->
+	gen_server:cast(?server, {shade_functions, FunList}).
+
 finite() ->
 	gen_server:call(?server, finite).
 
@@ -46,25 +56,48 @@ handle_cast({set_file, File}, State) ->
 	{noreply, State#state{file = File}};
 
 handle_cast({add_link, Caller, Called}, State = #state{links = Links}) ->
-	NewLinks = case lists:member({Caller, Called}, Links) of
-		true -> Links;
-		false -> [{Caller, Called} | Links]
-	end,
+	NewLinks = 
+		case lists:member(Caller, State#state.shaded_functions) of
+			true ->
+				Links;
+
+			_ -> 
+				case lists:member({Caller, Called}, Links) of
+					true -> Links;
+					_ -> [{Caller, Called} | Links]
+				end
+		end,
+
 	{noreply, State#state{links = NewLinks}};
 
 handle_cast({add_fart, Module, Fart}, State = #state{external = FarList}) ->
-	NewList = case maps:is_key(Module, FarList) of
-		true -> 
-			#{Module := Value} = FarList,
-			case lists:member(Fart, Value) of
-				true -> FarList;
-				false -> FarList#{Module => [Fart | Value]}
-			end;
-		false ->
-			FarList#{Module => [Fart]}
-	end,
-	{noreply, State#state{external = NewList}}.
+	NewList = 
+		case lists:member(Module, State#state.shaded_modules) of
+			true ->
+				FarList;
 
+			_ -> 
+				case maps:is_key(Module, FarList) of
+					true -> 
+						#{Module := Value} = FarList,
+						case lists:member(Fart, Value) of
+							true -> FarList;
+							false -> FarList#{Module => [Fart | Value]}
+						end;
+					false ->
+						FarList#{Module => [Fart]}
+				end
+		end,
+		
+	{noreply, State#state{external = NewList}};
+
+handle_cast({shade_modules, ModuleList}, State) ->
+	{noreply, State#state{shaded_modules = ModuleList}};
+
+handle_cast({shade_functions, FunList}, State) ->
+	{noreply, State#state{shaded_functions = FunList}};
+
+handle_cast(_, State) -> {noreply, State}.
 
 handle_call(finite, _, #state{file = File, external = Ext, links = Links}) ->
 	%% init UML
