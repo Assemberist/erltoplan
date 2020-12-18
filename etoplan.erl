@@ -16,6 +16,9 @@ parse(File) ->
 	erlout:start(),
 	erlout:set_file(?output),
 	{ok, Src} = epp:parse_file(File, []),
+
+	erlout:shade_functions([ Fun || {Fun, _} <- erlang:module_info(functions)]),
+	erlout:shade_modules([lists, mnesia, erlang, proplists, gen_server]),
 	
 	Extports = 
 		proplists:get_keys(

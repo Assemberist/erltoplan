@@ -35,8 +35,10 @@ write_link(Caller, Called) ->
 
 write_far_link(Caller, Module, Called) ->
 	Converted = fart_olink(Module, Called),
-	gen_server:cast(?server, {add_fart, Module, Converted}),
-	write_link(Caller, Converted).
+	case gen_server:call(?server, {add_fart, Module, Converted}) of
+		ok -> write_link(Caller, Converted);
+		_ -> ok
+	end.
 
 shade_modules(ModuleList) ->
 	gen_server:cast(?server, {shade_modules, ModuleList}).
@@ -70,27 +72,6 @@ handle_cast({add_link, Caller, Called}, State = #state{links = Links}) ->
 
 	{noreply, State#state{links = NewLinks}};
 
-handle_cast({add_fart, Module, Fart}, State = #state{external = FarList}) ->
-	NewList = 
-		case lists:member(Module, State#state.shaded_modules) of
-			true ->
-				FarList;
-
-			_ -> 
-				case maps:is_key(Module, FarList) of
-					true -> 
-						#{Module := Value} = FarList,
-						case lists:member(Fart, Value) of
-							true -> FarList;
-							false -> FarList#{Module => [Fart | Value]}
-						end;
-					false ->
-						FarList#{Module => [Fart]}
-				end
-		end,
-		
-	{noreply, State#state{external = NewList}};
-
 handle_cast({shade_modules, ModuleList}, State) ->
 	{noreply, State#state{shaded_modules = ModuleList}};
 
@@ -98,6 +79,27 @@ handle_cast({shade_functions, FunList}, State) ->
 	{noreply, State#state{shaded_functions = FunList}};
 
 handle_cast(_, State) -> {noreply, State}.
+
+handle_call({add_fart, Module, Fart}, _, State = #state{external = FarList}) ->
+	{Changes, NewList} = 
+		case lists:member(Module, State#state.shaded_modules) of
+			true ->
+				{nok, FarList};
+
+			_ -> 
+				case maps:is_key(Module, FarList) of
+					true -> 
+						#{Module := Value} = FarList,
+						case lists:member(Fart, Value) of
+							true -> {ok, FarList};
+							false -> {ok, FarList#{Module => [Fart | Value]}}
+						end;
+					false ->
+						{ok, FarList#{Module => [Fart]}}
+				end
+		end,
+		
+	{reply, Changes, State#state{external = NewList}};
 
 handle_call(finite, _, #state{file = File, external = Ext, links = Links}) ->
 	%% init UML
@@ -110,7 +112,7 @@ handle_call(finite, _, #state{file = File, external = Ext, links = Links}) ->
 	lists:map(fun(Value) -> put_link(File, Value) end, Links),
 
 	%% end of UML
-	file:write_file(File, "@enduml", [append]),
+	file:write_file(File, "\n@enduml", [append]),
 	{reply, ok, #state{}};
 
 handle_call(_, _, State) ->
