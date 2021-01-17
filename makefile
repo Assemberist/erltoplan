@@ -1,3 +1,3 @@
-all: *.erl
-	erlc *.erl
-	./emake.sh
+all:
+	erlc -o beam parser/*.erl gui/*.erl
+	./beam/emake.sh
