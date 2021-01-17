@@ -1,6 +1,6 @@
 -module(etoplan).
 
--include("/home/sanya/sources/erlang/erltoplan/termanus.hrl").
+-include("/home/sanya/sources/erlang/erltoplan/parser/termanus.hrl").
 
 -export([parse/1]).
 -export([parself/0]).
