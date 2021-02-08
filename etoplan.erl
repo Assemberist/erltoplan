@@ -3,49 +3,20 @@
 -include("/home/sanya/sources/erlang/erltoplan/termanus.hrl").
 
 -export([parse/1]).
--export([parself/0]).
 
--define(output, "output.txt").
+-define(output(File), File ++ ".txt").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Interfaces
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-parself() -> parse(?FILE).
 
 parse(File) ->
-	erlout:start(),
-	erlout:set_file(?output),
+	erlout:set_file(?output(File)),
 	{ok, Src} = epp:parse_file(File, []),
-
-	erlout:shade_functions([ Fun || {Fun, _} <- erlang:module_info(functions)]),
-	erlout:shade_modules([lists, mnesia, erlang, proplists, gen_server]),
 	
-	Extports = 
-		proplists:get_keys(
-			lists:foldl(
-				fun(A, Acc)->
-					case A of
-						?attr_export -> A#attribute.value ++ Acc;
-						_ -> Acc
-					end
-				end, 
-				[], Src
-			)
-		),
-		
-	erlout:write_exports(Extports),
+	erlout:write_exports([Exp#attribute.value || Exp <- Src, Exp#attribute.type == export]),
 	
-	Functions = 
-		lists:foldl(
-			fun(A, Acc)->
-				case A of
-					#function{} -> [A | Acc];
-					_ -> Acc
-				end
-			end, 
-			[], Src
-		),
-	[slide(Fun#function.enrtyes, Fun#function.name) || Fun <- Functions],
+	[slide(Fun#function.enrtyes, Fun#function.name) || Fun <- Src, is_record(Fun, function)],
 	erlout:finite().
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
