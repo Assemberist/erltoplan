@@ -23,7 +23,7 @@ loop(Port) ->
 		{Port, {data, Data}} ->
             case binary_to_term(list_to_binary(Data)) of
                 {query, Query} ->
-                    Port ! answer_guery(Query);
+                    Port ! {self(), {command, answer_guery(Query)}};
                 
                 {config, Config} ->
                     Modules = set_config(Config),
