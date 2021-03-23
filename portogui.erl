@@ -21,20 +21,13 @@ init(ExtPrg) ->
 loop(Port) ->
     receive
 		{Port, {data, Data}} ->
-            case binary_to_term(list_to_binary(Data)) of
-                {query, Query} ->
-                    Port ! {self(), {command, answer_guery(Query)}};
-                
-                {config, Config} ->
-                    Modules = set_config(Config),
-                    lists:map(fun erltoplan:parse/1, Modules);
-
-                %% kick out this shit
-                %% but later
-                {look_term, Term} ->
-                    io:format("~p\n", [Term])
-
-            end,
+			Term = parse_data(Data),
+			case analyser:handle_request(Term) of 
+				{reply, Reply} ->
+					Port ! {self(), Reply},
+				_ -> 
+					ok;
+			end,
 			loop(Port);
 
 		stop ->
@@ -48,34 +41,5 @@ loop(Port) ->
 			exit(port_terminated)
     end.
 
-answer_guery({parse_for_functions, File}) ->
-    {ok, Src} = epp:parse_file(File, []),
-    Funs = [Fun#function.name || Fun <- Src, is_record(Fun, function)],
-    lists:foldl(fun(Val, Acc) -> Acc ++ "+" ++ atom_to_list(Val) end, [], Funs);
-
-answer_guery(_Query) ->
-    ok.
-
-%% parsing of received config
-set_config([{analyse, Modules} | []]) ->
-    Modules;
-
-set_config([Head | Tail]) ->
-    NewList = case Head of
-        {output, Name} ->
-            erlout:set_file(Name),
-            Tail;
-
-        {shade_modules, Modules} ->
-            erlout:shade_modules(Modules),
-            Tail;
-
-        {shade_funs, Funs} ->
-            erlout:shade_modules(Funs),
-            Tail;
-
-        {analyse, _} ->
-            Tail ++ [Head]
-
-    end,
-    set_config(NewList).
+parse_data(Data) ->
+	Data.
