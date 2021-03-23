@@ -10,11 +10,11 @@
 -export([fart_olink/2]).
 
 -record(state, {
-	file :: string(), 
-	external = #{} :: #{atom() => [atom()]},
-	links = [] :: [{atom(), atom()}],
-	shaded_modules = [] :: [atom()],
-	shaded_functions = [] :: [atom()]
+	file 					:: string(), 
+	external = #{} 			:: #{atom() => [atom()]},
+	links = [] 				:: [{atom(), atom()}],
+	shaded_modules = [] 	:: [atom()],
+	shaded_functions = [] 	:: [atom()]
 }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

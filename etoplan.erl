@@ -1,17 +1,18 @@
 -module(etoplan).
 
--include("/home/sanya/sources/erlang/erltoplan/termanus.hrl").
+-include("/home/sanya/source/erltoplan/termanus.hrl").
 
--export([parse/1]).
-
--define(output(File), File ++ ".txt").
+-export([parse/1, get_functions/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Interfaces
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+get_functions(File) ->
+	{ok, Src} = epp:parse_file(File, []),
+	[Fun#function.name || Fun <- Src, is_record(Fun, function)].
+
 parse(File) ->
-	erlout:set_file(?output(File)),
 	{ok, Src} = epp:parse_file(File, []),
 	
 	erlout:write_exports([Exp#attribute.value || Exp <- Src, Exp#attribute.type == export]),

@@ -1,11 +1,10 @@
 -module(portogui).
 
--include("/home/sanya/sources/erlang/erltoplan/termanus.hrl").
+-include("/home/sanya/source/erltoplan/termanus.hrl").
 
 -export([start/1, stop/0, loop/1, init/1]).
 
 start(ExtPrg) ->
-	store:start(),
     spawn(?MODULE, init, [ExtPrg]).
 
 stop() ->
@@ -21,12 +20,11 @@ init(ExtPrg) ->
 loop(Port) ->
     receive
 		{Port, {data, Data}} ->
-			Term = parse_data(Data),
-			case analyser:handle_request(Term) of 
+			case analyser:handle_request(Data) of 
 				{reply, Reply} ->
-					Port ! {self(), Reply},
+					Port ! {self(), Reply};
 				_ -> 
-					ok;
+					ok
 			end,
 			loop(Port);
 
@@ -40,6 +38,3 @@ loop(Port) ->
 		{'EXIT', Port, _Reason} ->
 			exit(port_terminated)
     end.
-
-parse_data(Data) ->
-	Data.
