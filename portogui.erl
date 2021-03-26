@@ -9,10 +9,10 @@ start(ExtPrg) ->
     spawn(?MODULE, init, [ExtPrg]).
 
 stop() ->
-    complex ! stop.
+    portogui ! stop.
 
 init(ExtPrg) ->
-    register(complex, self()),
+    register(portogui, self()),
     process_flag(trap_exit, true),
     Port = open_port({spawn, ExtPrg}, [{packet, 2}]),
     erlout:start(),
@@ -23,21 +23,21 @@ loop(Port) ->
 		{Port, {data, Data}} ->
 			case parse_data(string:split(Data, "|", all)) of 
 				{reply, Reply} ->
-					Port ! {self(), Reply};
+					port_command(Port,  Reply);
 				_ -> 
 					ok
-			end,
+			end, 			
 			loop(Port);
 
 		stop ->
 			Port ! {self(), close},
 			receive
-			{Port, closed} ->
-				exit(normal)
+				{Port, closed} ->
+					exit(normal)
 			end;
 
-		{'EXIT', Port, _Reason} ->
-			exit(port_terminated)
+		{'EXIT', Port, Reason} ->
+			exit(Reason)
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,18 +47,17 @@ loop(Port) ->
 parse_data(["build diagramm"]) ->
 	erlout:finite();
 	
-parse_data([Term | []]) ->
-	io:format("~p\n", [Term]),
+parse_data([_Term | []]) ->
 	{reply, "pong"};
 
-parse_data([set_dir | Dir]) ->
+parse_data(["set_dir" | Dir]) ->
 	erlout:set_file(Dir);
 
-parse_data([shade_modules | Modules]) ->
+parse_data(["shade_modules" | Modules]) ->
 	erlout:shade_modules(Modules);
 	
-parse_data([shade_functions | Funs]) ->
+parse_data(["shade_functions" | Funs]) ->
 	erlout:shade_functions(Funs);
 
-parse_data([analyse_modules | Modules]) ->
+parse_data(["analyse_modules" | Modules]) ->
 	Modules.
