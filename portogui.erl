@@ -1,8 +1,9 @@
 -module(portogui).
+-export([start/1, stop/0, loop/1, init/1, parse_data/1]).
 
--include("/home/sanya/source/erltoplan/termanus.hrl").
-
--export([start/1, stop/0, loop/1, init/1]).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% port only wait data from and send to gui								%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 start(ExtPrg) ->
     spawn(?MODULE, init, [ExtPrg]).
@@ -20,7 +21,7 @@ init(ExtPrg) ->
 loop(Port) ->
     receive
 		{Port, {data, Data}} ->
-			case analyser:handle_request(Data) of 
+			case parse_data(string:split(Data, "|", all)) of 
 				{reply, Reply} ->
 					Port ! {self(), Reply};
 				_ -> 
@@ -38,3 +39,26 @@ loop(Port) ->
 		{'EXIT', Port, _Reason} ->
 			exit(port_terminated)
     end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% analyse received data from gui										%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+parse_data(["build diagramm"]) ->
+	erlout:finite();
+	
+parse_data([Term | []]) ->
+	io:format("~p\n", [Term]),
+	{reply, "pong"};
+
+parse_data([set_dir | Dir]) ->
+	erlout:set_file(Dir);
+
+parse_data([shade_modules | Modules]) ->
+	erlout:shade_modules(Modules);
+	
+parse_data([shade_functions | Funs]) ->
+	erlout:shade_functions(Funs);
+
+parse_data([analyse_modules | Modules]) ->
+	Modules.
