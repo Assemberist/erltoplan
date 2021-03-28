@@ -21,6 +21,7 @@ init(ExtPrg) ->
 loop(Port) ->
     receive
 		{Port, {data, Data}} ->
+			io:format("~p~n", [Data]),
 			case parse_data(string:split(Data, "|", all)) of 
 				{reply, Reply} ->
 					port_command(Port,  Reply);
@@ -46,9 +47,6 @@ loop(Port) ->
 
 parse_data(["build diagramm"]) ->
 	erlout:finite();
-	
-parse_data([_Term | []]) ->
-	{reply, "pong"};
 
 parse_data(["set_dir" | Dir]) ->
 	erlout:set_file(Dir);
@@ -60,4 +58,7 @@ parse_data(["shade_functions" | Funs]) ->
 	erlout:shade_functions(Funs);
 
 parse_data(["analyse_modules" | Modules]) ->
-	Modules.
+	[parser:parse(Module) || Module <- Modules];
+
+parse_data(_) ->
+	ok.
