@@ -58,7 +58,7 @@ parse_data(["shade_functions" | Funs]) ->
 	erlout:shade_functions(Funs);
 
 parse_data(["analyse_modules" | Modules]) ->
-	[parser:parse(Module) || Module <- Modules];
+	[parser:links(Module) || Module <- Modules];
 
 parse_data(_) ->
 	ok.
