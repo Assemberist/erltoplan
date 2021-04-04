@@ -1,20 +1,22 @@
 	ErlToPlan.
 
-This library developed for building UML diagramms by erlang modules.
+This library developed for building UML diagramms by erlang modules. Current version builded and tested on linux.
+Code based on document belowe.
 
-	Module erlout.
-This module used for creating text files with code for PlantUML. Definetlly, it is Activity diagramms.
-
-Function description.
-
-1) start() - initiate gen_server from erlout module. Should be called for using module functions.
-2) set_file(File) - set name of output file as File.
-3) write_exports(Exports) - add functions into block "export". If block do not exist it will be created.
-4) write_link - add call internal function of the module or function from std.
-5) write_far_link - add call 
-6) finite
-7) shade_modules
-8) shade_functions
-
-Version 11.1.4
+Erlang abstract format (Version 11.1.4)
 http://erlang.org/doc/apps/erts/absform.html
+
+	How to build:
+
+Run: make build
+
+	How to use:
+
+1) Correct using interface in emake.sh: Set path to interface in double quotes.
+2) Run: make run
+
+! Just make without arguments will build modules and run interface.
+
+	Additional info:
+
+* This version can use any programm as interface (GUI or console) or it can be used directly from erlang.
