@@ -56,18 +56,24 @@ handle_cast({write_links, Links}, State = #state{links = OldLinks}) ->
 
 handle_cast(_, State) -> {noreply, State}.
 
-handle_call(finite, _, #state{file = File, links = Links}) ->
+handle_call(finite, _, State = #state{file = File, links = Links}) ->
 	%% init UML
 	file:write_file(File, "@startuml\n\n", [write]),
 
+	%% remove duplicates
+	ULinks = lists:usort(Links),
+
+	%% remove shaded modules and functions
+	UALinks = remove_shaded(ULinks, State#state.shaded_modules, State#state.shaded_functions),
+
 	%% get all funs and modules
-	Modules = sort_calls(Links),
+	Modules = sort_calls(UALinks),
 	
 	%% write all nodes
 	maps:map(fun(Module, Value) -> put_node(File, Module, Value) end, Modules),
 
 	%% write all links
-	lists:map(fun(Value) -> put_link(File, Value) end, Links),
+	lists:map(fun(Value) -> put_link(File, Value) end, UALinks),
 
 	%% end of UML
 	file:write_file(File, "\n@enduml", [append]),
@@ -100,7 +106,12 @@ sort_calls(Calls) ->
 		fun({Mod, Fun}, Map)->
 			case maps:find(Mod, Map) of
 				{ok, Val} ->
-					Map#{Mod := [Fun | Val]};
+					case lists:member(Fun, Val) of
+						true ->
+							Map;
+						_ ->
+							Map#{Mod := [Fun | Val]}
+					end;
 				_ ->
 					Map#{Mod => [Fun]}
 			end
@@ -108,3 +119,24 @@ sort_calls(Calls) ->
 		#{},
 		lists:merge(lists:map(fun erlang:tuple_to_list/1, Calls))
 	).
+
+remove_shaded(Links, Modules, FunList) ->
+	RemMods = lists:filter(
+		fun({{M1, _}, {M2, _}}) ->
+			case lists:member(M1, Modules) or
+				 lists:member(M2, Modules) of
+				true -> false;
+				_ -> true
+			end
+		end,
+		Links),
+	
+	lists:filter(
+		fun({Caller, Called}) ->
+			case lists:member(Caller, FunList) or
+				 lists:member(Called, FunList) of
+				true -> false;
+				_ -> true
+			end
+		end, 
+		RemMods).
