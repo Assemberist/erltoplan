@@ -21,7 +21,6 @@ init(ExtPrg) ->
 loop(Port) ->
     receive
 		{Port, {data, Data}} ->
-			io:format("~p~n", [Data]),
 			case parse_data(string:split(Data, "|", all)) of 
 				{reply, Reply} ->
 					port_command(Port,  Reply);
@@ -56,9 +55,15 @@ parse_data(["shade_modules" | Modules]) ->
 	
 parse_data(["shade_functions" | Funs]) ->
 	erlout:shade_functions([{list_to_atom(Mod), list_to_atom(Name)} || [Mod, Name] <- [lists:split(Fun, ":") || Fun <- Funs]]);
+	
+parse_data(["get_functions", Module]) ->
+	{reply, string:join([atom_to_list(Fun) || Fun <- parser:get_functions(MODULE)], "|")}.
 
 parse_data(["analyse_modules" | Modules]) ->
 	[parser:links(Module) || Module <- Modules];
+
+parse_data([reset_config]) ->
+	erlout:reset();
 
 parse_data(_) ->
 	ok.

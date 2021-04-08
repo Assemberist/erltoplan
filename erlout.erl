@@ -5,7 +5,7 @@
 
 -export([init/1, handle_call/3, handle_cast/2]).
 -export([start/0, set_file/1, write_links/1, finite/0, 
-		shade_modules/1, shade_functions/1
+		shade_modules/1, shade_functions/1, reset/0
 	]).
 
 -record(state, {
@@ -34,6 +34,9 @@ shade_modules(ModuleList) ->
 shade_functions(FunList) ->
 	gen_server:cast(?server, {shade_functions, FunList}).
 
+reset() ->
+	gen_server:cast(?server, reset).
+
 finite() ->
 	gen_server:call(?server, finite).
 
@@ -53,15 +56,17 @@ handle_cast({shade_functions, FunList}, State) ->
 
 handle_cast({write_links, Links}, State = #state{links = OldLinks}) ->
 	{noreply, State#state{links = OldLinks ++ Links}};
+	
+handle_cast(reset, _) -> {noreply, #state{}}.
 
 handle_cast(_, State) -> {noreply, State}.
 
-handle_call(finite, _, State = #state{file = File, links = Links}) ->
+handle_call(finite, _, State = #state{file = File}) ->
 	%% init UML
 	file:write_file(File, "@startuml\n\n", [write]),
 
 	%% remove duplicates
-	ULinks = lists:usort(Links),
+	ULinks = lists:usort(State#state.links),
 
 	%% remove shaded modules and functions
 	UALinks = remove_shaded(ULinks, State#state.shaded_modules, State#state.shaded_functions),
@@ -133,10 +138,6 @@ remove_shaded(Links, Modules, FunList) ->
 	
 	lists:filter(
 		fun({Caller, Called}) ->
-			case lists:member(Caller, FunList) or
-				 lists:member(Called, FunList) of
-				true -> false;
-				_ -> true
-			end
+			not (lists:member(Caller, FunList) or lists:member(Called, FunList)) 
 		end, 
 		RemMods).
