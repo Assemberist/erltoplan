@@ -49,10 +49,12 @@ handle_cast({set_file, File}, State) ->
 	{noreply, State#state{file = File}};
 
 handle_cast({shade_modules, ModuleList}, State) ->
-	{noreply, State#state{shaded_modules = ModuleList}};
+	NewModuleList = State#state.shaded_modules ++ ModuleList,
+	{noreply, State#state{shaded_modules = NewModuleList}};
 
 handle_cast({shade_functions, FunList}, State) ->
-	{noreply, State#state{shaded_functions = FunList}};
+	NewFunList = State#state.shaded_functions ++ FunList,
+	{noreply, State#state{shaded_functions = NewFunList}};
 
 handle_cast({write_links, Links}, State = #state{links = OldLinks}) ->
 	{noreply, State#state{links = OldLinks ++ Links}};
