@@ -1,6 +1,6 @@
 -module(parser).
 
--include("/home/sanya/source/erltoplan/termanus.hrl").
+-include("termanus.hrl").
 
 -export([links/1, get_links/3, get_functions/1]).
 

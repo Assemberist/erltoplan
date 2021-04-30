@@ -4,12 +4,12 @@
 -define(server, {global, ?MODULE}).
 
 -export([init/1, handle_call/3, handle_cast/2]).
--export([start/0, set_file/1, write_links/1, finite/0, 
+-export([start/0, set_file/1, write_links/1, finite/0,
 		shade_modules/1, shade_functions/1, reset/0
 	]).
 
 -record(state, {
-	file 						:: string(), 
+	file 						:: string(),
 	links = [] 					:: [{{atom(), atom()}, {atom(), atom()}}],
 	shaded_modules = [] 		:: [atom()],
 	shaded_functions = [] 		:: [atom()]
@@ -56,8 +56,8 @@ handle_cast({shade_functions, FunList}, State) ->
 
 handle_cast({write_links, Links}, State = #state{links = OldLinks}) ->
 	{noreply, State#state{links = OldLinks ++ Links}};
-	
-handle_cast(reset, _) -> {noreply, #state{}}.
+
+handle_cast(reset, _) -> {noreply, #state{}};
 
 handle_cast(_, State) -> {noreply, State}.
 
@@ -73,7 +73,7 @@ handle_call(finite, _, State = #state{file = File}) ->
 
 	%% get all funs and modules
 	Modules = sort_calls(UALinks),
-	
+
 	%% write all nodes
 	maps:map(fun(Module, Value) -> put_node(File, Module, Value) end, Modules),
 

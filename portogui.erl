@@ -57,7 +57,7 @@ parse_data(["shade_functions" | Funs]) ->
 	erlout:shade_functions([{list_to_atom(Mod), list_to_atom(Name)} || [Mod, Name] <- [lists:split(Fun, ":") || Fun <- Funs]]);
 	
 parse_data(["get_functions", Module]) ->
-	{reply, string:join([atom_to_list(Fun) || Fun <- parser:get_functions(MODULE)], "|")}.
+	{reply, string:join([atom_to_list(Fun) || Fun <- parser:get_functions(Module)], "|")};
 
 parse_data(["analyse_modules" | Modules]) ->
 	[parser:links(Module) || Module <- Modules];
