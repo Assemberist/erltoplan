@@ -4,8 +4,12 @@
 
 run(Args) ->
 	erlout:start(),
-	lists:foldl(fun ?MODULE:arg_handle/2, files, Args),
-	erlout:finite().
+	try 
+		lists:foldl(fun ?MODULE:arg_handle/2, files, Args),
+		erlout:finite()
+	catch _:_:_ ->
+		ok
+	end.
 
 arg_handle("-h", _) -> 
     put_help(),
@@ -40,4 +44,4 @@ arg_handle(Arg, ignore) ->
 	end.
 
 put_help() ->
-    os:cmd("cat doc/help.txt").
+    io:format(os:cmd("cat doc/help.txt")).

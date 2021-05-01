@@ -6,4 +6,4 @@ build: *.erl
 	erlc *.erl
 
 run:
-	./emake.sh
+	./emake.sh -h

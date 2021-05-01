@@ -6,16 +6,20 @@ Code based on document belowe.
 Erlang abstract format (Version 11.1.4)
 http://erlang.org/doc/apps/erts/absform.html
 
+	Requirements:
+
+1) erlang compiler
+2) plantuml utility
+
 	How to build:
 
 Run: make build
 
 	How to use:
 
-1) Correct using interface in emake.sh: Set path to interface in double quotes.
-2) Run: make run
+To view help run: ./emake.sh -h
 
-! Just make without arguments will build modules and run interface.
+! Just make without arguments will build modules and show help.
 
 	Additional info:
 
