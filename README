@@ -6,21 +6,25 @@ Code based on document belowe.
 Erlang abstract format (Version 11.1.4)
 http://erlang.org/doc/apps/erts/absform.html
 
-	Requirements:
+	REQUIREMENTS:
 
 1) erlang compiler
 2) plantuml utility
 
-	How to build:
+	HOW TO BUILD:
 
 Run: make build
+!!! Just make without arguments will build modules and show help. !!!
 
-	How to use:
+	HOW TO USE:
+	
+1) create code for plantuml
+./emake.sh <files> -o <output file>
 
-To view help run: ./emake.sh -h
+2) let plantuml creates diagramm
+plantuml <output file>
 
-! Just make without arguments will build modules and show help.
+	ADDITIONAL INFO:
 
-	Additional info:
-
-* This version can use any programm as interface (GUI or console) or it can be used directly from erlang.
+* To view help run: ./emake.sh -h
+* This version can use any programm as interface (GUI or console) or it can be used directly from erlang. 
