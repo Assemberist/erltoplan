@@ -5,14 +5,16 @@
 
 -export([init/1, handle_call/3, handle_cast/2]).
 -export([start/0, set_file/1, write_links/1, finite/0,
-		shade_modules/1, shade_functions/1, reset/0
+		shade_modules/1, shade_functions/1, reset/0,
+		get_links/0, add_file/1
 	]).
 
 -record(state, {
 	file 						:: string(),
 	links = [] 					:: [{{atom(), atom()}, {atom(), atom()}}],
 	shaded_modules = [] 		:: [atom()],
-	shaded_functions = [] 		:: [atom()]
+	shaded_functions = [] 		:: [atom()],
+	analysed_files = []			:: [string()]
 }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -33,6 +35,12 @@ shade_modules(ModuleList) ->
 
 shade_functions(FunList) ->
 	gen_server:cast(?server, {shade_functions, FunList}).
+
+get_links() ->
+	gen_server:call(?server, get_links).
+	
+add_file(Path) ->
+	gen_server:cast(?server, {add_file, Path}).
 
 reset() ->
 	gen_server:cast(?server, reset).
@@ -59,9 +67,15 @@ handle_cast({shade_functions, FunList}, State) ->
 handle_cast({write_links, Links}, State = #state{links = OldLinks}) ->
 	{noreply, State#state{links = OldLinks ++ Links}};
 
+handle_cast({add_file, Path}, State = #state{analysed_files = Files}) ->
+	{noreply, State#state{analysed_files = [Path | Files]}};
+
 handle_cast(reset, _) -> {noreply, #state{}};
 
 handle_cast(_, State) -> {noreply, State}.
+
+handle_call(get_links, _, State)
+	{reply, State#state.links, State};
 
 handle_call(finite, _, State = #state{file = File}) ->
 	%% init UML

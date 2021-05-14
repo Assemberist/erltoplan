@@ -60,7 +60,7 @@ parse_data(["get_functions", Module]) ->
 	{reply, string:join([atom_to_list(Fun) || Fun <- parser:get_functions(Module)], "|")};
 
 parse_data(["analyse_modules" | Modules]) ->
-	[parser:links(Module) || Module <- Modules];
+	lists:foreach(fun parser:links/1, Modules);
 
 parse_data([reset_config]) ->
 	erlout:reset();
