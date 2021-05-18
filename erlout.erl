@@ -74,7 +74,7 @@ handle_cast(reset, _) -> {noreply, #state{}};
 
 handle_cast(_, State) -> {noreply, State}.
 
-handle_call(get_links, _, State)
+handle_call(get_links, _, State) ->
 	{reply, State#state.links, State};
 
 handle_call(finite, _, State = #state{file = File}) ->
