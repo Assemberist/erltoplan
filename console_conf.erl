@@ -49,8 +49,8 @@ put_help() ->
 emake.sh - script for building diagramms for erlang modules.
 
 syntax:
-    ./emake.sh <Modules> [-i <Ignore list>] [flags]
-    ./emake.sh -h
+    emake.sh <Modules> [-i <Ignore list>] [flags]
+    emake.sh -h
 
     Note: -h option shall end execution of script after show help.
 

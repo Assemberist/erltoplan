@@ -14,17 +14,33 @@ http://erlang.org/doc/apps/erts/absform.html
 	HOW TO BUILD:
 
 Run: make build
-!!! Just make without arguments will build modules and show help. !!!
+After ertoplan is builded it can be used without install.
 
-	HOW TO USE:
-	
-1) create code for plantuml
+Usage:
+
+1) Change location on erltoplan directory.
+cd <Path>/erltoplan
+
+2) Create code for plantuml
 ./emake.sh <files> -o <output file>
 
-2) let plantuml creates diagramm
+3) Let plantuml creates diagramm
+plantuml <output file>
+
+	HOW TO INSTALL:
+
+Run: make install
+It made erltoplan globally accessed.
+
+Usage:
+
+1) Create code for plantuml
+emake.sh <files> -o <output file>
+
+2) Let plantuml creates diagramm
 plantuml <output file>
 
 	ADDITIONAL INFO:
 
-* To view help run: ./emake.sh -h
+* To view help run: emake.sh -h
 * This version can use any programm as interface (GUI or console) or it can be used directly from erlang. 
