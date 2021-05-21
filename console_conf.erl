@@ -19,14 +19,14 @@ arg_handle("-i", _) ->
 	ignore;
 
 arg_handle("--no-std", State) ->
-	erlout:shade_modules([erlang]),
+	erlout:put(shaded_modules, [erlang]),
 	State;
 
 arg_handle("-o", State) ->
     {name, State};
 
 arg_handle(Arg, {name, State}) ->
-    erlout:set_file(Arg),
+    erlout:set(file, Arg),
     State;
 
 arg_handle(Arg, files) ->
@@ -36,9 +36,9 @@ arg_handle(Arg, files) ->
 arg_handle(Arg, ignore) ->
 	case string:split(Arg, ":") of
 		[Module | []] -> 
-			erlout:shade_modules([list_to_atom(Module)]);
+			erlout:put(shaded_modules, [list_to_atom(Module)]);
 		[Module, Function] ->
-			erlout:shade_functions([{list_to_atom(Module), list_to_atom(Function)}]);
+			erlout:put(shaded_functions, [{list_to_atom(Module), list_to_atom(Function)}]);
 		_ ->
 			exit(fuck)
 	end.

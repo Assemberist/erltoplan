@@ -48,13 +48,13 @@ parse_data(["build diagramm"]) ->
 	erlout:finite();
 
 parse_data(["set_dir" | Dir]) ->
-	erlout:set_file(Dir);
+	erlout:set(file, Dir);
 
 parse_data(["shade_modules" | Modules]) ->
-	erlout:shade_modules([list_to_atom(Mod) || Mod <- Modules]);
+	erlout:put(shaded_modules, [list_to_atom(Mod) || Mod <- Modules]);
 	
 parse_data(["shade_functions" | Funs]) ->
-	erlout:shade_functions([{list_to_atom(Mod), list_to_atom(Name)} || [Mod, Name] <- [lists:split(Fun, ":") || Fun <- Funs]]);
+	erlout:put(shaded_functions, [{list_to_atom(Mod), list_to_atom(Name)} || [Mod, Name] <- [lists:split(Fun, ":") || Fun <- Funs]]);
 	
 parse_data(["get_functions", Module]) ->
 	{reply, string:join([atom_to_list(Fun) || Fun <- parser:get_functions(Module)], "|")};

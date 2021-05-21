@@ -4,43 +4,33 @@
 -define(server, {global, ?MODULE}).
 
 -export([init/1, handle_call/3, handle_cast/2]).
--export([start/0, set_file/1, write_links/1, finite/0,
-		shade_modules/1, shade_functions/1, reset/0,
-		get_links/0, add_file/1
-	]).
+-export([start/0, set/2, put/2, get/1, finite/0, reset/0]).
 
--record(state, {
-	file 						:: string(),
-	links = [] 					:: [{{atom(), atom()}, {atom(), atom()}}],
-	shaded_modules = [] 		:: [atom()],
-	shaded_functions = [] 		:: [atom()],
-	analysed_files = []			:: [string()]
-}).
+-define(default_state,
+    #{
+        file => "undefined.txt",    % string(),
+        links => [],                % [{{atom(), atom()}, {atom(), atom()}}],
+        shaded_modules => [],       % [atom()],
+        shaded_functions => [],     % [atom()],
+        analysed_files => []        % [string()]
+    }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% interface funs														%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 start() ->
-	gen_server:start_link(?server, ?MODULE, [], []).
+	gen_server:start_link(?server, ?MODULE, ?default_state, []).
 
-set_file(File) ->
-	gen_server:cast(?server, {set_file, File}).
+set(Field, Value) ->
+    gen_server:cast(?server, {set, {Field, Value}}).
 
-write_links(Links) ->
-	gen_server:cast(?server, {write_links, Links}).
+-spec put(atom(), [term()]) -> ok.
+	put(Field, Values) ->
+    gen_server:cast(?server, {put, {Field, Values}}).
 
-shade_modules(ModuleList) ->
-	gen_server:cast(?server, {shade_modules, ModuleList}).
-
-shade_functions(FunList) ->
-	gen_server:cast(?server, {shade_functions, FunList}).
-
-get_links() ->
-	gen_server:call(?server, get_links).
-	
-add_file(Path) ->
-	gen_server:cast(?server, {add_file, Path}).
+get(Field) ->
+    gen_server:cast(?server, {get, Field}).
 
 reset() ->
 	gen_server:cast(?server, reset).
@@ -48,60 +38,48 @@ reset() ->
 finite() ->
 	gen_server:call(?server, finite).
 
+init(State) -> {ok, State}.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% gen_server part														%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-init(_) -> {ok, #state{}}.
 
-handle_cast({set_file, File}, State) ->
-	{noreply, State#state{file = File}};
+handle_cast({set, {Field, Value}}, State) ->
+    {noreply, State#{Field := Value}};
 
-handle_cast({shade_modules, ModuleList}, State) ->
-	NewModuleList = State#state.shaded_modules ++ ModuleList,
-	{noreply, State#state{shaded_modules = NewModuleList}};
+handle_cast({put, {Field, Values}}, State) ->
+    OldValues = maps:get(Field, State),
+    {noreply, State#{Field := Values ++ OldValues}};
 
-handle_cast({shade_functions, FunList}, State) ->
-	NewFunList = State#state.shaded_functions ++ FunList,
-	{noreply, State#state{shaded_functions = NewFunList}};
+handle_cast({get, Field}, State) ->
+    {noreply, maps:get(Field, State)};
 
-handle_cast({write_links, Links}, State = #state{links = OldLinks}) ->
-	{noreply, State#state{links = OldLinks ++ Links}};
+handle_cast(reset, _) ->
+    {noreply, ?default_state}.
 
-handle_cast({add_file, Path}, State = #state{analysed_files = Files}) ->
-	{noreply, State#state{analysed_files = [Path | Files]}};
+handle_call(finite, _, State) ->
+    File = maps:get(file, State),
+    %% init UML
+    file:write_file(File, "@startuml\n\n", [write]),
 
-handle_cast(reset, _) -> {noreply, #state{}};
+    %% remove duplicates
+    ULinks = lists:usort(maps:get(links, State)),
 
-handle_cast(_, State) -> {noreply, State}.
+    %% remove shaded modules and functions
+    UALinks = remove_shaded(ULinks, maps:get(shaded_modules, State), maps:get(shaded_functions, State)),
 
-handle_call(get_links, _, State) ->
-	{reply, State#state.links, State};
+    %% get all funs and modules
+    Modules = sort_calls(UALinks),
 
-handle_call(finite, _, State = #state{file = File}) ->
-	%% init UML
-	file:write_file(File, "@startuml\n\n", [write]),
+    %% write all nodes
+    maps:map(fun(Module, Value) -> put_node(File, Module, Value) end, Modules),
 
-	%% remove duplicates
-	ULinks = lists:usort(State#state.links),
+    %% write all links
+    lists:map(fun(Value) -> put_link(File, Value) end, UALinks),
 
-	%% remove shaded modules and functions
-	UALinks = remove_shaded(ULinks, State#state.shaded_modules, State#state.shaded_functions),
-
-	%% get all funs and modules
-	Modules = sort_calls(UALinks),
-
-	%% write all nodes
-	maps:map(fun(Module, Value) -> put_node(File, Module, Value) end, Modules),
-
-	%% write all links
-	lists:map(fun(Value) -> put_link(File, Value) end, UALinks),
-
-	%% end of UML
-	file:write_file(File, "\n@enduml", [append]),
-	{reply, ok, #state{}};
-
-handle_call(_, _, State) ->
-	{reply, {error, you_pidor}, State}.
+    %% end of UML
+    file:write_file(File, "\n@enduml", [append]),
+    {reply, ok, ?default_state}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%  iternal functions													%%%%
