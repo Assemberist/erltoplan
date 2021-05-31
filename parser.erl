@@ -18,7 +18,7 @@ links(File) ->
 	FunList = [Fun || Fun <- Src, is_record(Fun, function)],
 	Calls = lists:merge([get_links(Fun#function.enrtyes, {Module, Fun#function.name}, Module) || Fun <- FunList]),
 	TrueCalls = filter_std_funs(Calls, [Fun#function.name || Fun <- FunList], Module),
-	erlout:set(links, TrueCalls).
+	erlout:put(links, TrueCalls).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% New idea to search on tree													%%
