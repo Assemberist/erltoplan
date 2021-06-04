@@ -12,7 +12,8 @@
         links => [],                % [{{atom(), atom()}, {atom(), atom()}}],
         shaded_modules => [],       % [atom()],
         shaded_functions => [],     % [atom()],
-        analysed_files => []        % [string()]
+        analysed_files => [],       % [string()]
+		trash => [] 				% [term()]
     }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -30,7 +31,7 @@ set(Field, Value) ->
     gen_server:cast(?server, {put, {Field, Values}}).
 
 get(Field) ->
-    gen_server:cast(?server, {get, Field}).
+    gen_server:call(?server, {get, Field}).
 
 reset() ->
 	gen_server:cast(?server, reset).
@@ -51,11 +52,11 @@ handle_cast({put, {Field, Values}}, State) ->
     OldValues = maps:get(Field, State),
     {noreply, State#{Field := Values ++ OldValues}};
 
-handle_cast({get, Field}, State) ->
-    {noreply, maps:get(Field, State)};
-
 handle_cast(reset, _) ->
     {noreply, ?default_state}.
+
+handle_call({get, Field}, State) ->
+    {reply, maps:get(Field, State), State};
 
 handle_call(finite, _, State) ->
     File = maps:get(file, State),

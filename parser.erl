@@ -2,7 +2,7 @@
 
 -include("termanus.hrl").
 
--export([links/1, get_links/3, get_functions/1]).
+-export([links/1, get_links/2, get_functions/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Interfaces																	%%
@@ -16,62 +16,54 @@ links(File) ->
 	{ok, Src} = epp:parse_file(File, []),
 	[Module] = [Mod#attribute.value || Mod = ?attr_module <- Src],
 	FunList = [Fun || Fun <- Src, is_record(Fun, function)],
-	Calls = lists:merge([get_links(Fun#function.enrtyes, {Module, Fun#function.name}, Module) || Fun <- FunList]),
-	TrueCalls = filter_std_funs(Calls, [Fun#function.name || Fun <- FunList], Module),
-	erlout:put(links, TrueCalls).
+	[get_links(Fun, Module) || Fun <- FunList],
+	TrueCalls = filter_std_funs(erlout:get(trash), [Fun#function.name || Fun <- FunList], Module),
+	erlout:put(links, TrueCalls),
+	erlout:set(trash, []).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% New idea to search on tree													%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-get_links(Element, FunName, Mod) when is_list(Element) ->
-	lists:merge([get_links(A, FunName, Mod) || A <- Element]);
+get_links(Fun = #function{}, Module) ->
+	[get_links(Clause, {Module, Fun#function.name}) || Clause <- Fun#function.enrtyes];
 
-get_links(Element, FunName, Mod) when is_tuple(Element) ->
-	NextName = case element(1, Element) of
-		call ->
-			case Element#call.who of
-				#atom{} -> 
-					{Mod, Element#call.who#atom.val};
-				_ -> FunName
-			end;
-		remote ->
-			case {Element#remote.mod, Element#remote.func} of
-				{#atom{}, #atom{}} -> 
-					{Element#remote.mod#atom.val, Element#remote.func#atom.val};
-				_ -> FunName
-			end;
-		_ ->
-			FunName
+get_links(Element, Caller) when is_list(Element) ->
+	[get_links(A, Caller) || A <- Element];
+
+get_links(Element = #call{}, Caller = {Mod, _}) ->
+	case Element#call.who of
+		#atom{} -> 
+			erlout:put(trash, [Caller, {Mod, Element#call.who#atom.val}]);
+		_ -> 
+			get_links(Element#call.who, Caller)
 	end,
-
-	NextElements = lists:merge([get_links(Chpok, NextName, Mod) || Chpok <- tuple_to_list(Element)]),
-	case NextName of
-		FunName -> NextElements;
-		_ -> [{FunName, NextName} | NextElements]
+	get_links(Element#call.value, Caller);
+	
+get_links(Element = #remote{mod = Far, func = FarFun}, Caller) ->
+	case {Far, FarFun} of
+		{#atom{}, #atom{}} -> 
+			erlout:put(links, [Caller, {Far#atom.val, FarFun#atom.val}];
+		_ -> 
+			get_links(Element#remote,mod, Caller),
+			get_links(Element#remote,func, Caller)
 	end;
+
+get_links(Element, Caller) when is_tuple(Element) ->
+	[get_links(Chpok, Caller) || Chpok <- tuple_to_list(Element)];
 
 get_links(_, _, _) -> [].
 
 filter_std_funs(Calls, FunNames, Module) ->
 	lists:map(
-		fun({{M1, F1},{M2, F2}}) ->
-			Caller = case M1 of
+		fun({Caller, {M, F}}) ->
+			Called = case M of
 				Module -> 
-					case lists:member(F1, FunNames) of
-						true -> {M1, F1};
-						false -> {erlang, F1}
+					case lists:member(F, FunNames) of
+						true -> {M, F};
+						false -> {erlang, F}
 					end;
 				_ -> 
-					{M1, F1}
-			end,
-			Called = case M2 of
-				Module -> 
-					case lists:member(F2, FunNames) of
-						true -> {M2, F2};
-						false -> {erlang, F2}
-					end;
-				_ -> 
-					{M2, F2}
+					{M, F}
 			end,
 			{Caller, Called}
 		end,
