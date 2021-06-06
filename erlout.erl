@@ -55,7 +55,7 @@ handle_cast({put, {Field, Values}}, State) ->
 handle_cast(reset, _) ->
     {noreply, ?default_state}.
 
-handle_call({get, Field}, State) ->
+handle_call({get, Field}, _, State) ->
     {reply, maps:get(Field, State), State};
 
 handle_call(finite, _, State) ->
