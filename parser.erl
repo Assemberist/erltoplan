@@ -19,6 +19,7 @@ links(File) ->
 	[get_links(Fun, Module) || Fun <- FunList],
 	TrueCalls = filter_std_funs(erlout:get(trash), [Fun#function.name || Fun <- FunList], Module),
 	erlout:put(links, TrueCalls),
+	erlout:put(analysed_files, [File]),
 	erlout:set(trash, []).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -30,23 +31,12 @@ get_links(Fun = #function{}, Module) ->
 get_links(Element, Caller) when is_list(Element) ->
 	[get_links(A, Caller) || A <- Element];
 
-get_links(Element = #call{}, Caller = {Mod, _}) ->
-	case Element#call.who of
-		#atom{} -> 
-			erlout:put(trash, [{Caller, {Mod, Element#call.who#atom.val}}]);
-		_ -> 
-			get_links(Element#call.who, Caller)
-	end,
+get_links(Element = #call{who = #atom{val = Fun}}, Caller = {Mod, _}) ->
+	erlout:put(trash, [{Caller, {Mod, Fun}}]),
 	get_links(Element#call.value, Caller);
 	
-get_links(Element = #remote{mod = Far, func = FarFun}, Caller) ->
-	case {Far, FarFun} of
-		{#atom{}, #atom{}} -> 
-			erlout:put(links, [{Caller, {Far#atom.val, FarFun#atom.val}}]);
-		_ -> 
-			get_links(Element#remote.mod, Caller),
-			get_links(Element#remote.func, Caller)
-	end;
+get_links(#remote{mod = #atom{val = Far}, func = #atom{val = FarFun}}, Caller) ->
+	erlout:put(links, [{Caller, {Far#atom.val, FarFun#atom.val}}]);
 
 get_links(Element, Caller) when is_tuple(Element) ->
 	[get_links(Chpok, Caller) || Chpok <- tuple_to_list(Element)];

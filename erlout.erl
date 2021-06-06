@@ -12,7 +12,10 @@
         links => [],                % [{{atom(), atom()}, {atom(), atom()}}],
         shaded_modules => [],       % [atom()],
         shaded_functions => [],     % [atom()],
+
         analysed_files => [],       % [string()]
+		gs_links => [],
+
 		trash => [] 				% [term()]
     }).
 
