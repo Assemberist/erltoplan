@@ -11,7 +11,12 @@ parse_file(File) ->
     {ok, Src} = epp:parse_file(File, []),
 	[Module] = [Mod#attribute.value || Mod = ?attr_module <- Src],
     Funs = [Fun || Fun <- Src, is_record(Fun, function)],
-    [parse_fun(Fun, Module) || Fun <- Funs].
+    [parse_fun(Fun, Module) || Fun <- Funs],
+	gs_analyse().
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Extraction of needed data from tree											%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 parse_fun(Fun = #function{}, Module) ->
 	[parse(Clause, {Module, Fun#function{enrtyes = [Clause#clause{tail = []}]}}) || Clause <- Fun#function.enrtyes].
@@ -41,3 +46,39 @@ parse(Element, Caller) when is_tuple(Element) ->
 	[parse(Chpok, Caller) || Chpok <- tuple_to_list(Element)];
 
 parse(_, _) -> [].
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Analyse																		%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+gs_analyse() ->
+	%% Select functions that starts gen_server
+	{Starts, Tail1} = lists:partition(fun(X) ->
+			case X of 
+				{_, #call{
+							who = #remote{
+								mod = #atom{val = gen_server},
+								func = #atom{val = start}
+							},
+							value = Args
+						 }} when length(Args) == 4 -> true;
+
+				{_, #call{
+							who = #remote{
+								mod = #atom{val = gen_server},
+								func = #atom{val = start_link}
+								},
+							value = Args
+						 }} when length(Args) == 4 -> true;
+						 
+				{_, #call{
+							who = #remote{
+								mod = #atom{val = gen_server},
+								func = #atom{val = start_monitor}
+							},
+							value = Args
+						 }} when length(Args) == 4 -> true;
+						 
+				_ -> false
+		end,
+		erlout:get(gs_links)).
