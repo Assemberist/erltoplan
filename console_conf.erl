@@ -4,12 +4,14 @@
 
 run(Args) ->
 	erlout:start(),
-	try 
+	%try 
 		lists:foldl(fun ?MODULE:arg_handle/2, files, Args),
-		erlout:finite()
-	catch _:_:_ ->
-		ok
-	end.
+		gs_parser:gs_parse(),
+		io:format("~p~n", [erlout:get(gs_links)]),
+		erlout:finite().
+	%catch _:_:_ ->
+	%	ok
+	%end.
 
 arg_handle("-h", _) -> 
     put_help(),

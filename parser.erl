@@ -36,7 +36,7 @@ get_links(Element = #call{who = #atom{val = Fun}}, Caller = {Mod, _}) ->
 	get_links(Element#call.value, Caller);
 	
 get_links(#remote{mod = #atom{val = Far}, func = #atom{val = FarFun}}, Caller) ->
-	erlout:put(links, [{Caller, {Far#atom.val, FarFun#atom.val}}]);
+	erlout:put(links, [{Caller, {Far, FarFun}}]);
 
 get_links(Element, Caller) when is_tuple(Element) ->
 	[get_links(Chpok, Caller) || Chpok <- tuple_to_list(Element)];
