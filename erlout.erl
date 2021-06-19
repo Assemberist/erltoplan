@@ -15,6 +15,7 @@
 
         analysed_files => [],       % [string()]
 		gs_links => [],
+		gs_servers => [],			% [{atom(), term()}]
 
 		trash => [] 				% [term()]
     }).

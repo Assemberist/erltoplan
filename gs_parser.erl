@@ -52,33 +52,47 @@ parse(_, _) -> [].
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 gs_analyse() ->
-	%% Select functions that starts gen_server
-	{Starts, Tail1} = lists:partition(fun(X) ->
-			case X of 
-				{_, #call{
-							who = #remote{
-								mod = #atom{val = gen_server},
-								func = #atom{val = start}
-							},
-							value = Args
-						 }} when length(Args) == 4 -> true;
+	{Starts, _} = lists:partition(fun starts/1, erlout:get(gs_links)),
+	{RegStarts, JustStarts} = lists:partition(fun reg_starts/1, Starts),
+	lists:map(fun simple_logger:war_1_not_reg_start_gen_server/1, JustStarts),
+	{Atomic, NonAtomic} = lists:partition(fun module_type/1, RegStarts),
+	lists:map(fun simple_logger:war_2_gen_server_mod_arg_is_not_atom/1, NonAtomic),
+	erlout:set(gs_servers, lists:map(fun assoc_gs_names/1, Atomic)).
 
-				{_, #call{
-							who = #remote{
-								mod = #atom{val = gen_server},
-								func = #atom{val = start_link}
-								},
-							value = Args
-						 }} when length(Args) == 4 -> true;
-						 
-				{_, #call{
-							who = #remote{
-								mod = #atom{val = gen_server},
-								func = #atom{val = start_monitor}
-							},
-							value = Args
-						 }} when length(Args) == 4 -> true;
-						 
-				_ -> false
-		end,
-		erlout:get(gs_links)).
+starts(Link) ->
+	case Link of 
+		{_, #call{
+				who = #remote{
+					mod = #atom{val = gen_server},
+					func = #atom{val = start}
+				}
+		}} -> true;
+
+		{_, #call{
+				who = #remote{
+					mod = #atom{val = gen_server},
+					func = #atom{val = start_link}
+				}
+		}} -> true;
+					
+		{_, #call{
+				who = #remote{
+					mod = #atom{val = gen_server},
+					func = #atom{val = start_monitor}
+				}
+		}} -> true;
+					
+		_ -> false
+	end.
+
+reg_starts({_, #call{value = Args}}) when length(Args) == 4 -> true;
+reg_starts(_) -> false.
+
+module_type({_, #call{value = Args}}) ->
+	case lists:nth(2, Args) of
+		#atom{} -> true;
+		_ -> false
+	end.
+
+assoc_gs_names(Call) ->
+	
