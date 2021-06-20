@@ -7,7 +7,7 @@ run(Args) ->
 	%try 
 		lists:foldl(fun ?MODULE:arg_handle/2, files, Args),
 		gs_parser:gs_parse(),
-		io:format("~p~n", [erlout:get(gs_links)]),
+		io:format("~p~n", [erlout:get(gs_servers)]),
 		erlout:finite().
 	%catch _:_:_ ->
 	%	ok

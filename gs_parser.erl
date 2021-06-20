@@ -57,7 +57,9 @@ gs_analyse() ->
 	lists:map(fun simple_logger:war_1_not_reg_start_gen_server/1, JustStarts),
 	{Atomic, NonAtomic} = lists:partition(fun module_type/1, RegStarts),
 	lists:map(fun simple_logger:war_2_gen_server_mod_arg_is_not_atom/1, NonAtomic),
-	erlout:set(gs_servers, lists:map(fun assoc_gs_names/1, Atomic)).
+	{Normal, Abst} = lists:partition(fun stabile_name/1, Atomic),
+	lists:map(fun simple_logger:war_3_gen_server_name_is_not_stable/1, Abst),
+	erlout:set(gs_servers, lists:map(fun assoc_gs_names/1, Normal)).
 
 starts(Link) ->
 	case Link of 
@@ -94,5 +96,14 @@ module_type({_, #call{value = Args}}) ->
 		_ -> false
 	end.
 
-assoc_gs_names(Call) ->
-	
+stabile_name({_, #call{value = Args}}) ->
+	[Name | _] = Args,
+	try erl_parse:normalise(Name),
+		true
+	catch
+		 _ -> false
+	end.
+
+assoc_gs_names({_, #call{value = Args}}) ->
+	[Name, #atom{val = Module} | _] = Args,
+	{Module, erl_parse:normalise(Name)}.
