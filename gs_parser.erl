@@ -59,6 +59,7 @@ gs_analyse() ->
 	lists:map(fun simple_logger:war_2_gen_server_mod_arg_is_not_atom/1, NonAtomic),
 	{Normal, Abst} = lists:partition(fun stabile_name/1, Atomic),
 	lists:map(fun simple_logger:war_3_gen_server_name_is_not_stable/1, Abst),
+	erlout:set(gs_ready, starts_linked(Normal)),
 	erlout:set(gs_servers, lists:map(fun assoc_gs_names/1, Normal)).
 
 starts(Link) ->
@@ -107,3 +108,24 @@ stabile_name({_, #call{value = Args}}) ->
 assoc_gs_names({_, #call{value = Args}}) ->
 	[Name, #atom{val = Module} | _] = Args,
 	{Module, erl_parse:normalise(Name)}.
+
+starts_linked(Links) ->
+	Funs = lists:filter(
+		fun({{_, _}, {_, _}}) -> false; (_) -> true end,
+		erlout:get(links)),
+
+	io:format("~p", [Funs]),
+	
+	lists:filtermap(
+		fun(Arg = {{Caller, #function{name = FunName}}, #call{value = Args}}) ->
+			[_, #atom{val = Called} | _] = Args,
+			case lists:member({Called, init}, Funs) of
+				true ->
+					{true, {{Caller, FunName}, {Called, init}}};
+				false ->
+					simple_logger:war_4__gen_server_init_not_found(Arg),
+					false
+			end
+		end,
+
+		Links).
