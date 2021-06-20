@@ -18,6 +18,7 @@ links(File) ->
 	FunList = [Fun || Fun <- Src, is_record(Fun, function)],
 	[get_links(Fun, Module) || Fun <- FunList],
 	TrueCalls = filter_std_funs(erlout:get(trash), [Fun#function.name || Fun <- FunList], Module),
+	erlout:put(links, [{Module, Fun#function.name} || Fun <- FunList]),
 	erlout:put(links, TrueCalls),
 	erlout:put(analysed_files, [File]),
 	erlout:set(trash, []).

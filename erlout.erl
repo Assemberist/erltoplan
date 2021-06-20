@@ -68,14 +68,19 @@ handle_call(finite, _, State) ->
     %% init UML
     file:write_file(File, "@startuml\n\n", [write]),
 
+	%% split on calls and defenitions
+	{Links, SingleLinks} = lists:partition(
+		fun	({{_, _}, {_, _}}) -> true; (_) -> false end,
+		maps:get(links, State)),
+
     %% remove duplicates
-    ULinks = lists:usort(maps:get(links, State)),
+    ULinks = lists:usort(Links),
 
     %% remove shaded modules and functions
     UALinks = remove_shaded(ULinks, maps:get(shaded_modules, State), maps:get(shaded_functions, State)),
 
     %% get all funs and modules
-    Modules = sort_calls(UALinks),
+    Modules = sort_calls(UALinks, SingleLinks),
 
     %% write all nodes
     maps:map(fun(Module, Value) -> put_node(File, Module, Value) end, Modules),
@@ -106,7 +111,7 @@ put_link(File, {{Mod1, Fun1}, {Mod2, Fun2}}) ->
 		["[", atom_to_list(Mod1), ":", atom_to_list(Fun1), "] --> [", 
 			atom_to_list(Mod2), ":", atom_to_list(Fun2), "]\n"]).
 
-sort_calls(Calls) ->
+sort_calls(Calls, SingleLinks) ->
 	lists:foldl(
 		fun({Mod, Fun}, Map)->
 			case maps:find(Mod, Map) of
@@ -122,7 +127,7 @@ sort_calls(Calls) ->
 			end
 		end,
 		#{},
-		lists:merge(lists:map(fun erlang:tuple_to_list/1, Calls))
+		lists:merge(lists:map(fun erlang:tuple_to_list/1, Calls)) ++ SingleLinks
 	).
 
 remove_shaded(Links, Modules, FunList) ->
