@@ -88,6 +88,9 @@ handle_call(finite, _, State) ->
     %% write all links
     lists:map(fun(Value) -> put_link(File, Value) end, UALinks),
 
+	%% write gen_server calls
+	lists:map(fun(Value) -> put_gs_links(File, Value) end, maps:get(gs_ready, State)),
+
     %% end of UML
     file:write_file(File, "\n@enduml", [append]),
     {reply, ok, ?default_state}.
@@ -146,3 +149,8 @@ remove_shaded(Links, Modules, FunList) ->
 			not (lists:member(Caller, FunList) or lists:member(Called, FunList)) 
 		end, 
 		RemMods).
+
+put_gs_links(File, {{Mod1, Fun1}, {Mod2, Fun2}}) ->
+	lists:map(fun(Value) -> file:write_file(File, Value, [append]) end,
+		["[", atom_to_list(Mod1), ":", atom_to_list(Fun1), "] ..> [", 
+			atom_to_list(Mod2), ":", atom_to_list(Fun2), "]\n"]).

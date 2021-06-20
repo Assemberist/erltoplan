@@ -113,8 +113,6 @@ starts_linked(Links) ->
 	Funs = lists:filter(
 		fun({{_, _}, {_, _}}) -> false; (_) -> true end,
 		erlout:get(links)),
-
-	io:format("~p", [Funs]),
 	
 	lists:filtermap(
 		fun(Arg = {{Caller, #function{name = FunName}}, #call{value = Args}}) ->
