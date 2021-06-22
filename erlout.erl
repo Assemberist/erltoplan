@@ -150,7 +150,7 @@ remove_shaded(Links, Modules, FunList) ->
 		end, 
 		RemMods).
 
-put_gs_links(File, {{Mod1, Fun1}, {Mod2, Fun2}}) ->
+put_gs_links(File, {{Mod1, Fun1}, {Mod2, Fun2}, Legend}) ->
 	lists:map(fun(Value) -> file:write_file(File, Value, [append]) end,
 		["[", atom_to_list(Mod1), ":", atom_to_list(Fun1), "] ..> [", 
-			atom_to_list(Mod2), ":", atom_to_list(Fun2), "]\n"]).
+			atom_to_list(Mod2), ":", atom_to_list(Fun2), "] : ", atom_to_list(Legend), "\n"]).

@@ -12,7 +12,10 @@ parse_file(File) ->
 	[Module] = [Mod#attribute.value || Mod = ?attr_module <- Src],
     Funs = [Fun || Fun <- Src, is_record(Fun, function)],
     [parse_fun(Fun, Module) || Fun <- Funs],
-	gs_analyse().
+	%% module parsed. Syntax analysis.
+	gs_starts(),
+	gs_calls(cast),
+	gs_calls(call).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Extraction of needed data from tree											%%
@@ -48,11 +51,11 @@ parse(Element, Caller) when is_tuple(Element) ->
 parse(_, _) -> [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Analyse																		%%
+%% gen_server start function analysis											%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-gs_analyse() ->
-	{Starts, _} = lists:partition(fun starts/1, erlout:get(gs_links)),
+gs_starts() ->
+	{Starts, NoStarts} = starts(erlout:get(gs_links)),
 	{RegStarts, JustStarts} = lists:partition(fun reg_starts/1, Starts),
 	lists:map(fun simple_logger:war_1_not_reg_start_gen_server/1, JustStarts),
 	{Atomic, NonAtomic} = lists:partition(fun module_type/1, RegStarts),
@@ -60,33 +63,21 @@ gs_analyse() ->
 	{Normal, Abst} = lists:partition(fun stabile_name/1, Atomic),
 	lists:map(fun simple_logger:war_3_gen_server_name_is_not_stable/1, Abst),
 	erlout:set(gs_ready, starts_linked(Normal)),
-	erlout:set(gs_servers, lists:map(fun assoc_gs_names/1, Normal)).
+	erlout:set(gs_servers, lists:map(fun assoc_gs_names/1, Normal)),
+	erlout:set(gs_links, NoStarts).
+
+select_functions(List, Fun) ->
+	lists:partition(fun(Link) ->
+			{_, #call{who = #remote{func = #atom{val = Fun}}}} -> true;
+			_ -> false;
+		end,
+		List).
 
 starts(Link) ->
-	case Link of 
-		{_, #call{
-				who = #remote{
-					mod = #atom{val = gen_server},
-					func = #atom{val = start}
-				}
-		}} -> true;
-
-		{_, #call{
-				who = #remote{
-					mod = #atom{val = gen_server},
-					func = #atom{val = start_link}
-				}
-		}} -> true;
-					
-		{_, #call{
-				who = #remote{
-					mod = #atom{val = gen_server},
-					func = #atom{val = start_monitor}
-				}
-		}} -> true;
-					
-		_ -> false
-	end.
+	{P1, T1} = select_functions(Link, start),
+	{P2, T2} = select_functions(T1, start_link),
+	{P3, T3} = select_functions(T2, start_monitor),
+	{P1 ++ P2 ++ P3, T3}.
 
 reg_starts({_, #call{value = Args}}) when length(Args) == 4 -> true;
 reg_starts(_) -> false.
@@ -119,7 +110,9 @@ starts_linked(Links) ->
 			[_, #atom{val = Called} | _] = Args,
 			case lists:member({Called, init}, Funs) of
 				true ->
-					{true, {{Caller, FunName}, {Called, init}}};
+					%% start is atom now but it should be changed
+					%% when separation on instances will be implemented
+					{true, {{Caller, FunName}, {Called, init}, start}};
 				false ->
 					simple_logger:war_4__gen_server_init_not_found(Arg),
 					false
@@ -127,3 +120,25 @@ starts_linked(Links) ->
 		end,
 
 		Links).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% gen_server calls/casts analysis												%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+gs_calls(Fun) ->
+	{Calls, NoCalls} = select_functions(erlout:get(gs_links), Fun),
+	{Normal, Abs} = lists:partition(fun stabile_call/1, Calls),
+	lists:map(fun simple_logger:war_5_gen_server_cast_uncnown_server/1, Abs),
+	lists:foldl(fun put_call/2, Fun, Normal),
+	erlout:set(gs_links, NoCalls).
+
+stabile_call({_, #call{value = Args}}) ->
+	[Name | _] = Args,
+	try erl_parse:normalise(Name),
+		true
+	catch
+		 _ -> false
+	end.
+
+put_call({{Mod, #function{name = FunName}}, #call{value = [Name | _]}}, Type) ->
+	erlout:put(gs_ready, [{{Mod, FunName}, {erl_parse:normalise(Name)}, Type}]), Type.
