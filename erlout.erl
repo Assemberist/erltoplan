@@ -42,7 +42,7 @@ reset() ->
 	gen_server:cast(?server, reset).
 
 finite() ->
-	gen_server:call(?server, finite).
+	gen_server:call(?server, finite, infinity).
 
 init(State) -> {ok, State}.
 

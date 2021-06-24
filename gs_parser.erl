@@ -62,8 +62,8 @@ gs_starts() ->
 	lists:map(fun simple_logger:war_2_gen_server_mod_arg_is_not_atom/1, NonAtomic),
 	{Normal, Abst} = lists:partition(fun stabile_name/1, Atomic),
 	lists:map(fun simple_logger:war_3_gen_server_name_is_not_stable/1, Abst),
-	erlout:set(gs_ready, starts_linked(Normal)),
-	erlout:set(gs_servers, lists:map(fun assoc_gs_names/1, Normal)),
+	erlout:put(gs_ready, starts_linked(Normal)),
+	erlout:put(gs_servers, lists:map(fun assoc_gs_names/1, Normal)),
 	erlout:set(gs_links, NoStarts).
 
 select_functions(List, Arg) ->
