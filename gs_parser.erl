@@ -66,10 +66,10 @@ gs_starts() ->
 	erlout:set(gs_servers, lists:map(fun assoc_gs_names/1, Normal)),
 	erlout:set(gs_links, NoStarts).
 
-select_functions(List, Fun) ->
-	lists:partition(fun(Link) ->
-			{_, #call{who = #remote{func = #atom{val = Fun}}}} -> true;
-			_ -> false;
+select_functions(List, Arg) ->
+	lists:partition(fun({_, #call{who = #remote{func = #atom{val = Fun}}}}) 
+				when Arg == Fun -> true;
+			(_) -> false
 		end,
 		List).
 
