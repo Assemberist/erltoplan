@@ -7,7 +7,7 @@
     war_2_gen_server_mod_arg_is_not_atom/1,
     war_3_gen_server_name_is_not_stable/1,
     war_4__gen_server_init_not_found/1,
-    war_5_gen_server_cast_uncnown_server/1
+    war_5_gen_server_call_uncnown_server/1
 ]).
 
 log(Format, Info) ->

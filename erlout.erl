@@ -178,10 +178,10 @@ associate_gs_calls(Links, Modules) ->
 		
 		case TrueMod of
 			[] -> 
-				war_5_gen_server_cast_uncnown_server({Caller, Term, Type}),
+				simple_logger:war_5_gen_server_call_uncnown_server({Caller, Term, Type}),
 				false;
 			_ ->
 				{true, {Caller, {TrueMod, case Type of call -> handle_call; _ -> handle_cast end}, Type}}
 		end
 	end,
-	AsocLinks) ++ Starts.
+	Calls) ++ Starts.

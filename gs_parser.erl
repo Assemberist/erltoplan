@@ -141,4 +141,4 @@ stabile_call({_, #call{value = Args}}) ->
 	end.
 
 put_call({{Mod, #function{name = FunName}}, #call{value = [Name | _]}}, Type) ->
-	erlout:put(gs_ready, [{{Mod, FunName}, {erl_parse:normalise(Name)}, Type}]), Type.
+	erlout:put(gs_ready, [{{Mod, FunName}, erl_parse:normalise(Name), Type}]), Type.
