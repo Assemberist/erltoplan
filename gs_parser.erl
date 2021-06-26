@@ -14,8 +14,12 @@ parse_file(File) ->
     [parse_fun(Fun, Module) || Fun <- Funs],
 	%% module parsed. Syntax analysis.
 	gs_starts(),
-	gs_calls(cast),
-	gs_calls(call).
+	gs_calls(cast, erlout:get(gs_casts)),
+	gs_calls(call, erlout:get(gs_calls)),
+	erlout:put(gs_ready, associate_gs_calls()),
+	erlout:set(gs_casts, []),
+	erlout:set(gs_calls, []),
+	erlout:set(trash, []).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Extraction of needed data from tree											%%
@@ -30,20 +34,17 @@ parse(Element, Caller) when is_list(Element) ->
 parse(Element = #call{
                     who = #remote{
                         mod = #atom{val = gen_server},
-                        func = #atom{}
+                        func =  #atom{val = Val}
                     }
                 }, Caller) ->
-	erlout:put(gs_links, [{Caller, Element}]),
+	case Val of
+		start -> erlout:put(gs_starts, [{Caller, Element}]);
+		start_link -> erlout:put(gs_starts, [{Caller, Element}]);
+		start_monitor -> erlout:put(gs_starts, [{Caller, Element}]);
+		call -> erlout:put(gs_calls, [{Caller, Element}]);
+		cast -> erlout:put(gs_casts, [{Caller, Element}])
+	end,
     parse(Element#call.value, Caller);
-
-parse(Element = #call{who = #atom{val = Fun}}, Caller = {Mod, #function{name = GSFun}})
-            when GSFun == handle_call; GSFun == handle_cast ->
-    erlout:put(gs_links, [{Caller, {Mod, Fun}}]),
-	parse(Element#call.value, Caller);
-
-parse(#remote{mod = #atom{val = Far}, func = #atom{val = FarFun}}, Caller = {_, #function{name = Fun}})
-            when Fun == handle_call; Fun == handle_cast ->
-	erlout:put(gs_links, [{Caller, {Far, FarFun}}]);
 
 parse(Element, Caller) when is_tuple(Element) ->
 	[parse(Chpok, Caller) || Chpok <- tuple_to_list(Element)];
@@ -55,8 +56,7 @@ parse(_, _) -> [].
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 gs_starts() ->
-	{Starts, NoStarts} = starts(erlout:get(gs_links)),
-	{RegStarts, JustStarts} = lists:partition(fun reg_starts/1, Starts),
+	{RegStarts, JustStarts} = lists:partition(fun reg_starts/1, erlout:get(gs_starts)),
 	lists:map(fun simple_logger:war_1_not_reg_start_gen_server/1, JustStarts),
 	{Atomic, NonAtomic} = lists:partition(fun module_type/1, RegStarts),
 	lists:map(fun simple_logger:war_2_gen_server_mod_arg_is_not_atom/1, NonAtomic),
@@ -64,20 +64,7 @@ gs_starts() ->
 	lists:map(fun simple_logger:war_3_gen_server_name_is_not_stable/1, Abst),
 	erlout:put(gs_ready, starts_linked(Normal)),
 	erlout:put(gs_servers, lists:map(fun assoc_gs_names/1, Normal)),
-	erlout:set(gs_links, NoStarts).
-
-select_functions(List, Arg) ->
-	lists:partition(fun({_, #call{who = #remote{func = #atom{val = Fun}}}}) 
-				when Arg == Fun -> true;
-			(_) -> false
-		end,
-		List).
-
-starts(Link) ->
-	{P1, T1} = select_functions(Link, start),
-	{P2, T2} = select_functions(T1, start_link),
-	{P3, T3} = select_functions(T2, start_monitor),
-	{P1 ++ P2 ++ P3, T3}.
+	erlout:set(gs_starts, []).
 
 reg_starts({_, #call{value = Args}}) when length(Args) == 4 -> true;
 reg_starts(_) -> false.
@@ -118,27 +105,37 @@ starts_linked(Links) ->
 					false
 			end
 		end,
-
 		Links).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% gen_server calls/casts analysis												%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-gs_calls(Fun) ->
-	{Calls, NoCalls} = select_functions(erlout:get(gs_links), Fun),
-	{Normal, Abs} = lists:partition(fun stabile_call/1, Calls),
-	lists:map(fun simple_logger:war_5_gen_server_cast_uncnown_server/1, Abs),
-	lists:foldl(fun put_call/2, Fun, Normal),
-	erlout:set(gs_links, NoCalls).
+gs_calls(Fun, List) ->
+	lists:foldl(fun check_call/2, Fun, List).
 
-stabile_call({_, #call{value = Args}}) ->
-	[Name | _] = Args,
-	try erl_parse:normalise(Name),
-		true
-	catch
-		 _ -> false
-	end.
+check_call(Call = {{Mod, #function{name = FunName}}, #call{value = [Name | _]}}, Type) ->
+	try erlout:put(trash, [{{Mod, FunName}, erl_parse:normalise(Name), Type}])
+	catch _ -> simple_logger:war_5_gen_server_cast_uncnown_server(Call)
+	end, Type.
 
-put_call({{Mod, #function{name = FunName}}, #call{value = [Name | _]}}, Type) ->
-	erlout:put(gs_ready, [{{Mod, FunName}, erl_parse:normalise(Name), Type}]), Type.
+associate_gs_calls() ->	
+	lists:filtermap(fun({Caller, Term, Type}) ->
+		[TrueMod, _] = lists:foldl(fun({Mod, Name}, [CalledName, Template]) ->
+			case Name of
+				Template -> [Mod, Template];
+				_ -> [CalledName, Template]
+			end
+		end,
+		[[], Term],
+		erlout:get(gs_servers)),
+		
+		case TrueMod of
+			[] -> 
+				simple_logger:war_5_gen_server_call_uncnown_server({Caller, Term, Type}),
+				false;
+			_ ->
+				{true, {Caller, {TrueMod, case Type of call -> handle_call; _ -> handle_cast end}, Type}}
+		end
+	end,
+	erlout:get(trash)).

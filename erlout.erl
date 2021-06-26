@@ -14,9 +14,11 @@
         shaded_functions => [],     % [atom()],
 
         analysed_files => [],       % [string()]
-		gs_links => [],
 		gs_servers => [],			% [{atom(), term()}]
-		gs_ready => [],				% [{{atom(), atom()}, {atom(), atom()}}],
+		gs_starts => [],			% [{{atom(), #function{}}, #call{}}],
+		gs_calls => [],				% [{{atom(), #function{}}, #call{}}],
+		gs_casts => [],				% [{{atom(), #function{}}, #call{}}],
+		gs_ready => [],				% 
 
 		trash => [] 				% [term()]
     }).
@@ -88,11 +90,8 @@ handle_call(finite, _, State) ->
     %% write all links
     lists:map(fun(Value) -> put_link(File, Value) end, UALinks),
 
-	%% bind calls with handle_functions
-	TrueGsLinks = associate_gs_calls(maps:get(gs_ready, State), maps:get(gs_servers, State)),
-
 	%% write gen_server calls
-	lists:map(fun(Value) -> put_gs_links(File, Value) end, TrueGsLinks),
+	lists:map(fun(Value) -> put_gs_links(File, Value) end, maps:get(gs_ready, State)),
 
     %% end of UML
     file:write_file(File, "\n@enduml", [append]),
@@ -157,31 +156,3 @@ put_gs_links(File, {{Mod1, Fun1}, {Mod2, Fun2}, Legend}) ->
 	lists:map(fun(Value) -> file:write_file(File, Value, [append]) end,
 		["[", atom_to_list(Mod1), ":", atom_to_list(Fun1), "] ..> [", 
 			atom_to_list(Mod2), ":", atom_to_list(Fun2), "] : ", atom_to_list(Legend), "\n"]).
-		
-associate_gs_calls(Links, Modules) ->
-	{Calls, Starts} = lists:partition(fun({_, _, Fun})
-		when Fun == call; Fun == cast ->
-			true;
-		(_) -> false
-	end,
-	Links),
-	
-	lists:filtermap(fun({Caller, Term, Type}) ->
-		[TrueMod, _] = lists:foldl(fun({Mod, Name}, [CalledName, Template]) ->
-			case Name of
-				Template -> [Mod, Template];
-				_ -> [CalledName, Template]
-			end
-		end,
-		[[], Term],
-		Modules),
-		
-		case TrueMod of
-			[] -> 
-				simple_logger:war_5_gen_server_call_uncnown_server({Caller, Term, Type}),
-				false;
-			_ ->
-				{true, {Caller, {TrueMod, case Type of call -> handle_call; _ -> handle_cast end}, Type}}
-		end
-	end,
-	Calls) ++ Starts.
