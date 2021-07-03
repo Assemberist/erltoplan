@@ -100,7 +100,7 @@ handle_call(finite, _, State) ->
     file:write_file(File, "\n@enduml", [append]),
     {reply, ok, ?default_state};
 
-handle_call({trace, Target}, _, State) ->
+handle_call({trace, {Target, Mode}}, _, State) ->
     File = maps:get(file, State),
     %% init UML
     file:write_file(File, "@startuml\n\n", [write]),
@@ -116,7 +116,14 @@ handle_call({trace, Target}, _, State) ->
 		fun	({{_, _}, {_, _}}) -> true; (_) -> false end,
 		UALinks),
 
-	BLinks = bind_links([], Links, Target, []),
+	BLinks = case Mode of
+		up ->
+			bind_links_up([], Links, Target, []);
+		down ->
+			bind_links_down([], Links, Target, []);
+		up_down ->
+			bind_links_up([], Links, Target, []) ++ bind_links_down([], Links, Target, [])
+		end,
 
     %% get all funs and modules
     Modules = sort_calls(BLinks, []),
@@ -190,15 +197,26 @@ put_gs_links(File, {{Mod1, Fun1}, {Mod2, Fun2}, Legend}) ->
 		["[", atom_to_list(Mod1), ":", atom_to_list(Fun1), "] ..> [", 
 			atom_to_list(Mod2), ":", atom_to_list(Fun2), "] : ", atom_to_list(Legend), "\n"]).
 
-
-bind_links(OldCallers, List, Called, Acc) ->
+bind_links_up(OldCallers, List, Called, Acc) ->
 	{NewCallers, Other} = get_callers(Called, List),
 	Callers = OldCallers ++ NewCallers,
 	case Callers of 
 		[] -> Acc;
 		[{Caller, _} | Tail] ->
-			bind_links(Tail, Other, Caller, Acc ++ NewCallers)
+			bind_links_up(Tail, Other, Caller, Acc ++ NewCallers)
 	end.
 
 get_callers(Called, List) ->
 	lists:partition(fun({_, X}) when X == Called -> true; (_) -> false end, List).
+
+bind_links_down(OldCalled, List, Caller, Acc) ->
+	{NewCalled, Other} = get_called(Caller, List),
+	Callers = OldCalled ++ NewCalled,
+	case Callers of 
+		[] -> Acc;
+		[{_, Called} | Tail] ->
+			bind_links_down(Tail, Other, Called, Acc ++ NewCalled)
+	end.
+
+get_called(Caller, List) ->
+	lists:partition(fun({X, _}) when X == Caller -> true; (_) -> false end, List).

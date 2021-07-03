@@ -7,7 +7,7 @@ run(Args) ->
 	%try 
 		lists:foldl(fun arg_handle/2, files, Args),
 		gs_parser:gs_parse(),
-		erlout:trace({erlout,get}).
+		erlout:trace({{simple_logger,war_4__gen_server_init_not_found}, up_down}).
 	%catch _:_:_ ->
 	%	ok
 	%end.
