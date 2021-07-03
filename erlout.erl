@@ -4,12 +4,12 @@
 -define(server, {global, ?MODULE}).
 
 -export([init/1, handle_call/3, handle_cast/2]).
--export([start/0, set/2, put/2, get/1, finite/0, reset/0]).
+-export([start/0, set/2, put/2, get/1, finite/0, trace/1, reset/0]).
 
 -define(default_state,
     #{
         file => "undefined.txt",    % string(),
-        links => [],                % [{{atom(), atom()}, {atom(), atom()}}],
+        links => [],                % [{{atom(), atom()}, {atom(), atom()}} | {atom(), atom()}],
         shaded_modules => [],       % [atom()],
         shaded_functions => [],     % [atom()],
 
@@ -46,6 +46,9 @@ reset() ->
 finite() ->
 	gen_server:call(?server, finite, infinity).
 
+trace(Target) ->
+	gen_server:call(?server, {trace, Target}, infinity).
+
 init(State) -> {ok, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -70,28 +73,59 @@ handle_call(finite, _, State) ->
     %% init UML
     file:write_file(File, "@startuml\n\n", [write]),
 
-	%% split on calls and defenitions
-	{Links, SingleLinks} = lists:partition(
-		fun	({{_, _}, {_, _}}) -> true; (_) -> false end,
-		maps:get(links, State)),
-
     %% remove duplicates
-    ULinks = lists:usort(Links),
+    ULinks = lists:usort(maps:get(links, State)),
 
     %% remove shaded modules and functions
     UALinks = remove_shaded(ULinks, maps:get(shaded_modules, State), maps:get(shaded_functions, State)),
 
+	%% split on calls and defenitions
+	{Links, SingleLinks} = lists:partition(
+		fun	({{_, _}, {_, _}}) -> true; (_) -> false end,
+		UALinks),
+
     %% get all funs and modules
-    Modules = sort_calls(UALinks, SingleLinks),
+    Modules = sort_calls(Links, SingleLinks),
 
     %% write all nodes
     maps:map(fun(Module, Value) -> put_node(File, Module, Value) end, Modules),
 
     %% write all links
-    lists:map(fun(Value) -> put_link(File, Value) end, UALinks),
+    lists:map(fun(Value) -> put_link(File, Value) end, Links),
 
 	%% write gen_server calls
 	lists:map(fun(Value) -> put_gs_links(File, Value) end, maps:get(gs_ready, State)),
+
+    %% end of UML
+    file:write_file(File, "\n@enduml", [append]),
+    {reply, ok, ?default_state};
+
+handle_call({trace, Target}, _, State) ->
+    File = maps:get(file, State),
+    %% init UML
+    file:write_file(File, "@startuml\n\n", [write]),
+
+    %% remove duplicates
+    ULinks = lists:usort(maps:get(links, State)),
+
+    %% remove shaded modules and functions
+    UALinks = remove_shaded(ULinks, maps:get(shaded_modules, State), maps:get(shaded_functions, State)),
+
+	%% split on calls and defenitions
+	Links = lists:filter(
+		fun	({{_, _}, {_, _}}) -> true; (_) -> false end,
+		UALinks),
+
+	BLinks = bind_links([], Links, Target, []),
+
+    %% get all funs and modules
+    Modules = sort_calls(BLinks, []),
+
+    %% write all nodes
+    maps:map(fun(Module, Value) -> put_node(File, Module, Value) end, Modules),
+
+    %% write all links
+    lists:map(fun(Value) -> put_link(File, Value) end, BLinks),
 
     %% end of UML
     file:write_file(File, "\n@enduml", [append]),
@@ -137,12 +171,11 @@ sort_calls(Calls, SingleLinks) ->
 
 remove_shaded(Links, Modules, FunList) ->
 	RemMods = lists:filter(
-		fun({{M1, _}, {M2, _}}) ->
-			case lists:member(M1, Modules) or
-				 lists:member(M2, Modules) of
-				true -> false;
-				_ -> true
-			end
+		fun
+			({{M1, _}, {M2, _}}) ->
+				not (lists:member(M1, Modules) or lists:member(M2, Modules));
+			({M1, _}) -> 
+				not lists:member(M1, Modules)
 		end,
 		Links),
 	
@@ -156,3 +189,16 @@ put_gs_links(File, {{Mod1, Fun1}, {Mod2, Fun2}, Legend}) ->
 	lists:map(fun(Value) -> file:write_file(File, Value, [append]) end,
 		["[", atom_to_list(Mod1), ":", atom_to_list(Fun1), "] ..> [", 
 			atom_to_list(Mod2), ":", atom_to_list(Fun2), "] : ", atom_to_list(Legend), "\n"]).
+
+
+bind_links(OldCallers, List, Called, Acc) ->
+	{NewCallers, Other} = get_callers(Called, List),
+	Callers = OldCallers ++ NewCallers,
+	case Callers of 
+		[] -> Acc;
+		[{Caller, _} | Tail] ->
+			bind_links(Tail, Other, Caller, Acc ++ NewCallers)
+	end.
+
+get_callers(Called, List) ->
+	lists:partition(fun({_, X}) when X == Called -> true; (_) -> false end, List).

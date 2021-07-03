@@ -5,9 +5,9 @@
 run(Args) ->
 	erlout:start(),
 	%try 
-		lists:foldl(fun ?MODULE:arg_handle/2, files, Args),
+		lists:foldl(fun arg_handle/2, files, Args),
 		gs_parser:gs_parse(),
-		erlout:finite().
+		erlout:trace({erlout,get}).
 	%catch _:_:_ ->
 	%	ok
 	%end.
@@ -42,7 +42,7 @@ arg_handle(Arg, ignore) ->
 			erlout:put(shaded_functions, [{list_to_atom(Module), list_to_atom(Function)}]);
 		_ ->
 			exit(fuck)
-	end.
+	end, ignore.
 
 put_help() ->
     io:format(
