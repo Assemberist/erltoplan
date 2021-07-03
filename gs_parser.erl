@@ -7,7 +7,7 @@
 gs_parse() ->
     lists:map(fun parse_file/1, erlout:get(analysed_files)).
 
-parse_file(File) ->
+parse_file({_, File, _}) ->
     {ok, Src} = epp:parse_file(File, []),
 	[Module] = [Mod#attribute.value || Mod = ?attr_module <- Src],
     Funs = [Fun || Fun <- Src, is_record(Fun, function)],
@@ -88,14 +88,13 @@ assoc_gs_names({_, #call{value = Args}}) ->
 	{Module, erl_parse:normalise(Name)}.
 
 starts_linked(Links) ->
-	Funs = lists:filter(
-		fun({{_, _}, {_, _}}) -> false; (_) -> true end,
-		erlout:get(links)),
+	Funs = lists:filtermap(
+		fun({Mod, _, [gen_server]}) -> {true, Mod}; (_) -> false end,
+		erlout:get(analysed_files)),
 	
 	lists:filtermap(
-		fun(Arg = {{Caller, #function{name = FunName}}, #call{value = Args}}) ->
-			[_, #atom{val = Called} | _] = Args,
-			case lists:member({Called, init}, Funs) of
+		fun(Arg = {{Caller, #function{name = FunName}}, #call{value = [_, #atom{val = Called} | _]}}) ->
+			case lists:member(Called, Funs) of
 				true ->
 					%% start is atom now but it should be changed
 					%% when separation on instances will be implemented
