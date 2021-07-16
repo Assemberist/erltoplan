@@ -39,7 +39,7 @@ get_links(Element = #call{who = #atom{val = Fun}}, Caller = {Mod, _}) ->
 	get_links(Element#call.value, Caller);
 	
 get_links(#remote{mod = #atom{val = Far}, func = #atom{val = FarFun}}, Caller) ->
-	erlout:put(links, [{Caller, {Far, FarFun}}]);
+	erlout:put(links, [#link{caller = Caller, called = {Far, FarFun}}]);
 
 get_links(Element, Caller) when is_tuple(Element) ->
 	[get_links(Chpok, Caller) || Chpok <- tuple_to_list(Element)];
@@ -47,7 +47,7 @@ get_links(Element, Caller) when is_tuple(Element) ->
 get_links(_, _) -> [].
 
 filter_std_funs(Calls, FunNames, Module) ->
-	lists:map(
+	Funs = lists:map(
 		fun({Caller, {M, F}}) ->
 			Called = case M of
 				Module -> 
@@ -61,4 +61,5 @@ filter_std_funs(Calls, FunNames, Module) ->
 			{Caller, Called}
 		end,
 		Calls
-	).
+	),
+	[#link{caller = Caller, called = Called} || {Caller, Called} <- Funs].

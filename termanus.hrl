@@ -1,3 +1,14 @@
+-type farFunction() :: {atom(), atom()}.
+
+-define(association(Type), -record(Type, {caller :: farFunction(), called :: farFunction()})).
+?association(gs_call).
+?association(gs_cast).
+?association(link).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Erlang epp standard records													%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 -record(function, {anno, name, arity, enrtyes}). %% {function,ANNO,Name,Arity,[Rep(Fc_1)]}.
 
 %% attributes

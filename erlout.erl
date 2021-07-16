@@ -1,6 +1,8 @@
 -module(erlout).
 -behavior(gen_server).
 
+-include("termanus.hrl").
+
 -define(server, {global, ?MODULE}).
 
 -export([init/1, handle_call/3, handle_cast/2]).
@@ -9,7 +11,7 @@
 -define(default_state,
     #{
         file => "undefined.txt",    % string(),
-        links => [],                % [{{atom(), atom()}, {atom(), atom()}} | {atom(), atom()}],
+        links => [],                % [#link{} | farFunction()],
         shaded_modules => [],       % [atom()],
         shaded_functions => [],     % [atom()],
 
@@ -81,7 +83,7 @@ handle_call(finite, _, State) ->
 
 	%% split on calls and defenitions
 	{Links, SingleLinks} = lists:partition(
-		fun	({{_, _}, {_, _}}) -> true; (_) -> false end,
+		fun	(#link{}) -> true; (_) -> false end,
 		UALinks),
 
     %% get all funs and modules
@@ -94,7 +96,7 @@ handle_call(finite, _, State) ->
     lists:map(fun(Value) -> put_link(File, Value) end, Links),
 
 	%% write gen_server calls
-	lists:map(fun(Value) -> put_gs_links(File, Value) end, maps:get(gs_ready, State)),
+	lists:map(fun(Value) -> put_link(File, Value) end, maps:get(gs_ready, State)),
 
     %% end of UML
     file:write_file(File, "\n@enduml", [append]),
@@ -113,7 +115,7 @@ handle_call({trace, {Target, Mode}}, _, State) ->
 
 	%% split on calls and defenitions
 	Links = lists:filter(
-		fun	({{_, _}, {_, _}}) -> true; (_) -> false end,
+		fun	(#link{}) -> true; (_) -> false end,
 		UALinks),
 
 	BLinks = case Mode of
@@ -152,11 +154,16 @@ put_node(File, NodeName, Elementes) ->
 		Elementes),
 	file:write_file(File, "}\n\n", [append]).
 
-put_link(File, {{Mod1, Fun1}, {Mod2, Fun2}}) ->
+put_link(File, {link, {Mod1, Fun1}, {Mod2, Fun2}}) ->
 	lists:map(fun(Value) -> file:write_file(File, Value, [append]) end,
 		["[", atom_to_list(Mod1), ":", atom_to_list(Fun1), "] --> [", 
-			atom_to_list(Mod2), ":", atom_to_list(Fun2), "]\n"]).
+			atom_to_list(Mod2), ":", atom_to_list(Fun2), "]\n"]);
 
+put_link(File, {Legend, {Mod1, Fun1}, {Mod2, Fun2}}) ->
+	lists:map(fun(Value) -> file:write_file(File, Value, [append]) end,
+		["[", atom_to_list(Mod1), ":", atom_to_list(Fun1), "] ..> [", 
+			atom_to_list(Mod2), ":", atom_to_list(Fun2), "] : ", atom_to_list(Legend), "\n"]).
+		
 sort_calls(Calls, SingleLinks) ->
 	lists:foldl(
 		fun({Mod, Fun}, Map)->
@@ -173,13 +180,13 @@ sort_calls(Calls, SingleLinks) ->
 			end
 		end,
 		#{},
-		lists:merge(lists:map(fun erlang:tuple_to_list/1, Calls)) ++ SingleLinks
+		lists:merge([[Caller, Called] || {_, Caller, Called} <- Calls]) ++ SingleLinks
 	).
 
 remove_shaded(Links, Modules, FunList) ->
 	RemMods = lists:filter(
 		fun
-			({{M1, _}, {M2, _}}) ->
+			({_, {M1, _}, {M2, _}}) ->
 				not (lists:member(M1, Modules) or lists:member(M2, Modules));
 			({M1, _}) -> 
 				not lists:member(M1, Modules)
@@ -187,36 +194,34 @@ remove_shaded(Links, Modules, FunList) ->
 		Links),
 	
 	lists:filter(
-		fun({Caller, Called}) ->
-			not (lists:member(Caller, FunList) or lists:member(Called, FunList)) 
+		fun
+			({_, Caller, Called}) ->
+				not (lists:member(Caller, FunList) or lists:member(Called, FunList));
+			(Link) ->
+				not (lists:member(Link, FunList))
 		end, 
 		RemMods).
-
-put_gs_links(File, {{Mod1, Fun1}, {Mod2, Fun2}, Legend}) ->
-	lists:map(fun(Value) -> file:write_file(File, Value, [append]) end,
-		["[", atom_to_list(Mod1), ":", atom_to_list(Fun1), "] ..> [", 
-			atom_to_list(Mod2), ":", atom_to_list(Fun2), "] : ", atom_to_list(Legend), "\n"]).
 
 bind_links_up(OldCallers, List, Called, Acc) ->
 	{NewCallers, Other} = get_callers(Called, List),
 	Callers = OldCallers ++ NewCallers,
 	case Callers of 
 		[] -> Acc;
-		[{Caller, _} | Tail] ->
+		[#link{caller = Caller} | Tail] ->
 			bind_links_up(Tail, Other, Caller, Acc ++ NewCallers)
 	end.
 
 get_callers(Called, List) ->
-	lists:partition(fun({_, X}) when X == Called -> true; (_) -> false end, List).
+	lists:partition(fun(X) when X#link.called == Called -> true; (_) -> false end, List).
 
 bind_links_down(OldCalled, List, Caller, Acc) ->
 	{NewCalled, Other} = get_called(Caller, List),
 	Callers = OldCalled ++ NewCalled,
 	case Callers of 
 		[] -> Acc;
-		[{_, Called} | Tail] ->
+		[#link{called = Called} | Tail] ->
 			bind_links_down(Tail, Other, Called, Acc ++ NewCalled)
 	end.
 
 get_called(Caller, List) ->
-	lists:partition(fun({X, _}) when X == Caller -> true; (_) -> false end, List).
+	lists:partition(fun(X) when X#link.caller == Caller -> true; (_) -> false end, List).
