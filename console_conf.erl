@@ -6,7 +6,7 @@ run(Args) ->
 	erlout:start(),
 	%try 
 		lists:foldl(fun arg_handle/2, files, Args),
-		%gs_parser:gs_parse(),
+		gs_parser:gs_parse(),
 		erlout:finite().
 	%catch _:_:_ ->
 	%	ok

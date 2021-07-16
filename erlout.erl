@@ -78,8 +78,12 @@ handle_call(finite, _, State) ->
     %% remove duplicates
     ULinks = lists:usort(maps:get(links, State)),
 
+	%% if we analysing gs then gen_server links duplicating gs_links.
+	%% it is patch and should be removed in major versiosns.
+	GS_ignore = case maps:get(gs_ready, State) of [] -> []; _ -> [gen_server] end,
+
     %% remove shaded modules and functions
-    UALinks = remove_shaded(ULinks, maps:get(shaded_modules, State), maps:get(shaded_functions, State)),
+    UALinks = remove_shaded(ULinks, maps:get(shaded_modules, State) ++ GS_ignore, maps:get(shaded_functions, State)),
 
 	%% split on calls and defenitions
 	{Links, SingleLinks} = lists:partition(

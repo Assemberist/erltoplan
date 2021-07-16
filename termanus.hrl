@@ -1,8 +1,6 @@
 -type farFunction() :: {atom(), atom()}.
 
 -define(association(Type), -record(Type, {caller :: farFunction(), called :: farFunction()})).
-?association(gs_call).
-?association(gs_cast).
 ?association(link).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

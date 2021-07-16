@@ -98,7 +98,7 @@ starts_linked(Links) ->
 				true ->
 					%% start is atom now but it should be changed
 					%% when separation on instances will be implemented
-					{true, {{Caller, FunName}, {Called, init}, start}};
+					{true, {start, {Caller, FunName}, {Called, init}}};
 				false ->
 					simple_logger:war_4__gen_server_init_not_found(Arg),
 					false
@@ -134,7 +134,7 @@ associate_gs_calls() ->
 				simple_logger:war_5_gen_server_call_uncnown_server({Caller, Term, Type}),
 				false;
 			_ ->
-				{true, {Caller, {TrueMod, case Type of call -> handle_call; _ -> handle_cast end}, Type}}
+				{true, {Type, Caller, {TrueMod, case Type of call -> handle_call; _ -> handle_cast end}}}
 		end
 	end,
 	erlout:get(trash)).
