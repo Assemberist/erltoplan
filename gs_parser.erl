@@ -2,24 +2,26 @@
 
 -include("termanus.hrl").
 
--export([gs_parse/0]).
+-export([gs_parse/1]).
 
-gs_parse() ->
-    lists:map(fun parse_file/1, erlout:get(analysed_files)).
-
-parse_file({_, File, _}) ->
-    {ok, Src} = epp:parse_file(File, []),
-	[Module] = [Mod#attribute.value || Mod = ?attr_module <- Src],
-    Funs = [Fun || Fun <- Src, is_record(Fun, function)],
-    [parse_fun(Fun, Module) || Fun <- Funs],
-	%% module parsed. Syntax analysis.
+gs_parse(Files) ->
+    lists:map(fun parse_file/1, Files),
 	gs_starts(),
 	gs_calls(cast, erlout:get(gs_casts)),
 	gs_calls(call, erlout:get(gs_calls)),
 	erlout:put(gs_ready, associate_gs_calls()),
 	erlout:set(gs_casts, []),
 	erlout:set(gs_calls, []),
-	erlout:set(trash, []).
+	erlout:set(trash, []).	
+
+parse_file(File) ->
+    {ok, Src} = epp:parse_file(File, []),
+	[Module] = [Mod#attribute.value || Mod = ?attr_module <- Src],
+	Behavior = [Module || #attribute{type = behavior, value = gen_server} <- Src],
+	erlout:put(analysed_files, Behavior),
+
+    Funs = [Fun || Fun <- Src, is_record(Fun, function)],
+    [parse_fun(Fun, Module) || Fun <- Funs].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Extraction of needed data from tree											%%
@@ -88,9 +90,7 @@ assoc_gs_names({_, #call{value = Args}}) ->
 	{Module, erl_parse:normalise(Name)}.
 
 starts_linked(Links) ->
-	Funs = lists:filtermap(
-		fun({Mod, _, [gen_server]}) -> {true, Mod}; (_) -> false end,
-		erlout:get(analysed_files)),
+	Funs = erlout:get(analysed_files),
 	
 	lists:filtermap(
 		fun(Arg = {{Caller, #function{name = FunName}}, #call{value = [_, #atom{val = Called} | _]}}) ->

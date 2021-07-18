@@ -15,14 +15,11 @@ get_functions(File) ->
 links(File) ->
 	{ok, Src} = epp:parse_file(File, []),
 	[Module] = [Mod#attribute.value || Mod = ?attr_module <- Src],
-	Behavior = [gen_server || #attribute{type = behavior, value = gen_server} <- Src],
-	
 	FunList = [Fun || Fun <- Src, is_record(Fun, function)],
 	[get_links(Fun, Module) || Fun <- FunList],
 	TrueCalls = filter_std_funs(erlout:get(trash), [Fun#function.name || Fun <- FunList], Module),
 	erlout:put(links, [{Module, Fun#function.name} || Fun <- FunList]),
 	erlout:put(links, TrueCalls),
-	erlout:put(analysed_files, [{Module, File, Behavior}]),
 	erlout:set(trash, []).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -3,6 +3,16 @@
 -define(association(Type), -record(Type, {caller :: farFunction(), called :: farFunction()})).
 ?association(link).
 
+-record(filter, {
+	modules = [] :: [atom()],
+	funs = [] :: [{atom(), atom()}]
+}).
+
+-record(config, {
+	files = [] :: [string()],
+	filters = #filter{}
+}).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Erlang epp standard records													%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

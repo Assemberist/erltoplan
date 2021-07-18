@@ -1,27 +1,23 @@
 -module(console_conf).
 
+-include("termanus.hrl").
+
 -export([run/1, arg_handle/2]).
 
 run(Args) ->
 	erlout:start(),
-	%try 
-		lists:foldl(fun arg_handle/2, files, Args),
-		gs_parser:gs_parse(),
-		erlout:finite().
-	%catch _:_:_ ->
-	%	ok
-	%end.
+	lists:foldl(fun arg_handle/2, config_all, Args),
+	erlout:finite().
 
 arg_handle("-h", _) -> 
     put_help(),
 	exit(ok);
 
-arg_handle("-i", _) ->
-	ignore;
-
-arg_handle("--no-std", State) ->
-	erlout:put(shaded_modules, [erlang]),
+arg_handle("-i", State = {_, ignore}) ->
 	State;
+
+arg_handle("-i", Mode) ->
+	{Mode, ignore};
 
 arg_handle("-o", State) ->
     {name, State};
@@ -30,19 +26,58 @@ arg_handle(Arg, {name, State}) ->
     erlout:set(file, Arg),
     State;
 
-arg_handle(Arg, files) ->
-	parser:links(Arg),
-	files;
+arg_handle("-l", _) ->
+	config_links;
 
-arg_handle(Arg, ignore) ->
-	case string:split(Arg, ":") of
+arg_handle("-g", _) ->
+	config_genServers;
+
+arg_handle("-a", _) ->
+	config_all;
+
+arg_handle(Arg, {Mode, ignore}) ->
+	%% fuckung record definition!!! 
+	%% Record field cannot be variable. Next code not work!!!
+	%% IList = Config#state.Mode#config.filters,
+	Config = erlout:get(Mode),
+	NewIList = case string:split(Arg, ":") of
 		[Module | []] -> 
-			erlout:put(shaded_modules, [list_to_atom(Module)]);
+			Config#config{filters = #filter{modules = [list_to_atom(Module) | Config#config.filters#filter.modules]}};
 		[Module, Function] ->
-			erlout:put(shaded_functions, [{list_to_atom(Module), list_to_atom(Function)}]);
+			Config#config{filters = #filter{funs = [{list_to_atom(Module), list_to_atom(Function)} | Config#config.filters#filter.funs]}};
 		_ ->
 			exit(fuck)
-	end, ignore.
+	end,
+	erlout:set(Mode, NewIList);
+
+arg_handle("-t", _) ->
+	trace;
+
+arg_handle(Arg, trace) ->
+	[Module, Function] = string:split(Arg, ":"),
+	erlout:set(format, {trace, {Module, Function}}),
+	trace;
+
+arg_handle("-tup", _) ->
+	trace_up;
+
+arg_handle(Arg, trace_up) ->
+	[Module, Function] = string:split(Arg, ":"),
+	erlout:set(format, {trace_up, {Module, Function}}),
+	trace_up;
+
+arg_handle("-tdown", _) ->
+	trace_down;
+
+arg_handle(Arg, trace_down) ->
+	[Module, Function] = string:split(Arg, ":"),
+	erlout:set(format, {trace_down, {Module, Function}}),
+	trace_down;
+
+arg_handle(Arg, Mode) ->
+	Config = erlout:get(Mode),
+	erlout:set(Mode, Config#config{files = [Arg | Config#config.files]}),
+	Mode.
 
 put_help() ->
     io:format(

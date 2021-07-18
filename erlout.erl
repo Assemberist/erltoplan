@@ -10,10 +10,13 @@
 
 -define(default_state,
     #{
+		config_all => #config{},
+		config_links => #config{},
+		config_genServers => #config{},
+		format => simple,			%atom() | {atom(), {atom(), atom()}},
+
         file => "undefined.txt",    % string(),
         links => [],                % [#link{} | farFunction()],
-        shaded_modules => [],       % [atom()],
-        shaded_functions => [],     % [atom()],
 
         analysed_files => [],       % [string()]
 		gs_servers => [],			% [{atom(), term()}]
