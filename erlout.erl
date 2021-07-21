@@ -6,7 +6,7 @@
 -define(server, {global, ?MODULE}).
 
 -export([init/1, handle_call/3, handle_cast/2]).
--export([start/0, set/2, put/2, get/1, finite/0, trace/1, reset/0]).
+-export([start/0, set/2, put/2, get/1, finite/0, reset/0]).
 
 -define(default_state,
     #{
@@ -23,7 +23,7 @@
 		gs_starts => [],			% [{{atom(), #function{}}, #call{}}],
 		gs_calls => [],				% [{{atom(), #function{}}, #call{}}],
 		gs_casts => [],				% [{{atom(), #function{}}, #call{}}],
-		gs_ready => [],				% 
+		gs_ready => [],				% [{call | cast | start, farFunction(), farFunction()}]
 
 		trash => [] 				% [term()]
     }).
@@ -51,9 +51,6 @@ reset() ->
 finite() ->
 	gen_server:call(?server, finite, infinity).
 
-trace(Target) ->
-	gen_server:call(?server, {trace, Target}, infinity).
-
 init(State) -> {ok, State}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -75,67 +72,45 @@ handle_call({get, Field}, _, State) ->
 
 handle_call(finite, _, State) ->
     File = maps:get(file, State),
-    %% init UML
+	%% init UML
     file:write_file(File, "@startuml\n\n", [write]),
 
-    %% remove duplicates
-    ULinks = lists:usort(maps:get(links, State)),
+	%% sort and remove shaded links
+	FilteredGsLinks = filter_links(maps:get(gs_ready, State), (maps:get(config_genServers, State))#config.filters),
+	FilteredLinks = filter_links(maps:get(links, State), (maps:get(config_links, State))#config.filters),
 
 	%% if we analysing gs then gen_server links duplicating gs_links.
 	%% it is patch and should be removed in major versiosns.
-	GS_ignore = case maps:get(gs_ready, State) of [] -> []; _ -> [gen_server] end,
-
-    %% remove shaded modules and functions
-    UALinks = remove_shaded(ULinks, maps:get(shaded_modules, State) ++ GS_ignore, maps:get(shaded_functions, State)),
+	%% Filtered2Links = case FilteredGsLinks of 
+	%%	[] -> FilteredLinks;
+	%%	_ -> remove_shaded(FilteredLinks, [gen_server], [])
+	%% end,
+	%% it should be removed if file analysed by both modules.
 
 	%% split on calls and defenitions
 	{Links, SingleLinks} = lists:partition(
 		fun	(#link{}) -> true; (_) -> false end,
-		UALinks),
+		FilteredLinks),
+	
+	AllLinks = Links ++ FilteredGsLinks,
 
-    %% get all funs and modules
-    Modules = sort_calls(Links, SingleLinks),
+	%% get all funs and modules
+    Modules = case maps:get(format, State) of
+		{{trace, Mode}, Target} ->
+			BLinks = case Mode of
+				up ->
+					bind_links_up([], AllLinks, Target, []);
+				down ->
+					bind_links_down([], AllLinks, Target, []);
+				up_down ->
+					bind_links_up([], AllLinks, Target, []) ++ bind_links_down([], AllLinks, Target, [])
+				end,
+			sort_calls(BLinks, []);
 
-    %% write all nodes
-    maps:map(fun(Module, Value) -> put_node(File, Module, Value) end, Modules),
-
-    %% write all links
-    lists:map(fun(Value) -> put_link(File, Value) end, Links),
-
-	%% write gen_server calls
-	lists:map(fun(Value) -> put_link(File, Value) end, maps:get(gs_ready, State)),
-
-    %% end of UML
-    file:write_file(File, "\n@enduml", [append]),
-    {reply, ok, ?default_state};
-
-handle_call({trace, {Target, Mode}}, _, State) ->
-    File = maps:get(file, State),
-    %% init UML
-    file:write_file(File, "@startuml\n\n", [write]),
-
-    %% remove duplicates
-    ULinks = lists:usort(maps:get(links, State)),
-
-    %% remove shaded modules and functions
-    UALinks = remove_shaded(ULinks, maps:get(shaded_modules, State), maps:get(shaded_functions, State)),
-
-	%% split on calls and defenitions
-	Links = lists:filter(
-		fun	(#link{}) -> true; (_) -> false end,
-		UALinks),
-
-	BLinks = case Mode of
-		up ->
-			bind_links_up([], Links, Target, []);
-		down ->
-			bind_links_down([], Links, Target, []);
-		up_down ->
-			bind_links_up([], Links, Target, []) ++ bind_links_down([], Links, Target, [])
-		end,
-
-    %% get all funs and modules
-    Modules = sort_calls(BLinks, []),
+		simple ->
+			BLinks = AllLinks,
+			sort_calls(AllLinks, SingleLinks)
+	end,
 
     %% write all nodes
     maps:map(fun(Module, Value) -> put_node(File, Module, Value) end, Modules),
@@ -145,6 +120,7 @@ handle_call({trace, {Target, Mode}}, _, State) ->
 
     %% end of UML
     file:write_file(File, "\n@enduml", [append]),
+
     {reply, ok, ?default_state}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -214,21 +190,24 @@ bind_links_up(OldCallers, List, Called, Acc) ->
 	Callers = OldCallers ++ NewCallers,
 	case Callers of 
 		[] -> Acc;
-		[#link{caller = Caller} | Tail] ->
+		[{_, Caller, _} | Tail] ->
 			bind_links_up(Tail, Other, Caller, Acc ++ NewCallers)
 	end.
 
 get_callers(Called, List) ->
-	lists:partition(fun(X) when X#link.called == Called -> true; (_) -> false end, List).
+	lists:partition(fun({_, _, X}) when X == Called -> true; (_) -> false end, List).
 
 bind_links_down(OldCalled, List, Caller, Acc) ->
 	{NewCalled, Other} = get_called(Caller, List),
 	Callers = OldCalled ++ NewCalled,
 	case Callers of 
 		[] -> Acc;
-		[#link{called = Called} | Tail] ->
+		[{_, _, Called} | Tail] ->
 			bind_links_down(Tail, Other, Called, Acc ++ NewCalled)
 	end.
 
 get_called(Caller, List) ->
-	lists:partition(fun(X) when X#link.caller == Caller -> true; (_) -> false end, List).
+	lists:partition(fun({_, X, _}) when X == Caller -> true; (_) -> false end, List).
+
+filter_links(Links, Filter) ->
+	remove_shaded(lists:usort(Links), Filter#filter.modules, Filter#filter.funs).

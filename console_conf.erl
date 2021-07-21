@@ -7,6 +7,14 @@
 run(Args) ->
 	erlout:start(),
 	lists:foldl(fun arg_handle/2, config_all, Args),
+	
+	LinksConf = merge_config(erlout:get(config_all), erlout:get(config_links)),
+	erlout:set(config_links, LinksConf),
+	lists:map(fun parser:links/1, LinksConf#config.files),
+	
+	GsLinksConf = merge_config(erlout:get(config_all), erlout:get(config_genServers)),
+	erlout:set(config_genServers, GsLinksConf),
+	gs_parser:gs_parse(GsLinksConf#config.files),
 	erlout:finite().
 
 arg_handle("-h", _) -> 
@@ -55,7 +63,7 @@ arg_handle("-t", _) ->
 
 arg_handle(Arg, trace) ->
 	[Module, Function] = string:split(Arg, ":"),
-	erlout:set(format, {trace, {Module, Function}}),
+	erlout:set(format, {{trace, up_down}, {list_to_atom(Module), list_to_atom(Function)}}),
 	trace;
 
 arg_handle("-tup", _) ->
@@ -63,7 +71,7 @@ arg_handle("-tup", _) ->
 
 arg_handle(Arg, trace_up) ->
 	[Module, Function] = string:split(Arg, ":"),
-	erlout:set(format, {trace_up, {Module, Function}}),
+	erlout:set(format, {{trace, up}, {list_to_atom(Module), list_to_atom(Function)}}),
 	trace_up;
 
 arg_handle("-tdown", _) ->
@@ -71,7 +79,7 @@ arg_handle("-tdown", _) ->
 
 arg_handle(Arg, trace_down) ->
 	[Module, Function] = string:split(Arg, ":"),
-	erlout:set(format, {trace_down, {Module, Function}}),
+	erlout:set(format, {{trace,down}, {list_to_atom(Module), list_to_atom(Function)}}),
 	trace_down;
 
 arg_handle(Arg, Mode) ->
@@ -108,3 +116,12 @@ flags:
     -o          Name output file.
     -h          show this text
 ").
+
+merge_config(Conf1, Conf2) ->
+	#config{
+		files = lists:usort(Conf1#config.files ++ Conf2#config.files),
+		filters = #filter{
+			modules = lists:usort(Conf1#config.filters#filter.modules ++ Conf2#config.filters#filter.modules),
+			funs = lists:usort(Conf1#config.filters#filter.funs ++ Conf2#config.filters#filter.funs)
+		}
+	}.
