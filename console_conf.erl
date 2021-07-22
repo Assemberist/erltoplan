@@ -82,6 +82,10 @@ arg_handle(Arg, trace_down) ->
 	erlout:set(format, {{trace,down}, {list_to_atom(Module), list_to_atom(Function)}}),
 	trace_down;
 
+arg_handle("-s", State) ->
+	erlout:set(format, simple),
+	State;
+
 arg_handle(Arg, Mode) ->
 	Config = erlout:get(Mode),
 	erlout:set(Mode, Config#config{files = [Arg | Config#config.files]}),
@@ -93,28 +97,50 @@ put_help() ->
 emake.sh - script for building diagramms for erlang modules.
 
 syntax:
-    emake.sh <Modules> [-i <Ignore list>] [flags]
-    emake.sh -h
+    emake.sh [Mode [<Modules>]] [-i <Ignore list>] [Flags] [Output]
 
     Note: -h option shall end execution of script after show help.
+
+Mode - type of analysis:
+
+    -l          Calls of functions
+    -g          gen_server calls
+    -a          All modes above (selected by default)
 
 <Modules> - List of files that should be analysed.
     Template: erlout.erl ...
 
-<Ignore list> - List of modules and functions that should be hidden. 
+<Ignore list> - List of modules and functions that should be hidden.
     Argument without ':' will be interpreted as name of module.
     Argument that matched 'module:function' will be interpreted as function.
     Argument that contain 2 and more ':' will lead to the end with error. 
 
     Template: erlout parser:links ...
+	
+    Note! Ignore list will be filled for last selected mode.
 
-flags:
+Flags:
 
     -i          Begin of ignore list. All next elemets except flags will be 
-                interpreted as part of ignore list.
-    --no-std    Add std functions to the ignore list.
-    -o          Name output file.
+                interpreted as part of ignore list until Mode will be not changed.
+    -o          Name output file. (default name of output file - undefined.txt)
     -h          show this text
+
+Output - way to present data:
+	
+	-s                          Show all calls (selected by default)
+    -tup <module:function>      Show all calls that can to call module:function
+    -tdown <module:function>    Show all calls that triggered when module:function
+    -t <module:function>        Show all calls that triggered when module:function
+	                            called and who can to call  it
+
+Usage:
+    emake.sh -h
+    emake.sh -l parser.erl -i lists 
+    emake.sh erlout.erl -i lists -l parser.erl -i epp:parse_file -o output.txt
+    emake.sh parser.erl -o output.txt -t parser:links
+
+
 ").
 
 merge_config(Conf1, Conf2) ->
