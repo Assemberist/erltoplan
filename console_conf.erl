@@ -56,7 +56,8 @@ arg_handle(Arg, {Mode, ignore}) ->
 		_ ->
 			exit(fuck)
 	end,
-	erlout:set(Mode, NewIList);
+	erlout:set(Mode, NewIList),
+	{Mode, ignore};
 
 arg_handle("-t", _) ->
 	trace;
